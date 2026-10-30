@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "../../chatgpt-auth";
+import { guidebookPackById } from "../../workspace/guidebook-data";
 
 export const dynamic = "force-dynamic";
 
@@ -102,12 +103,12 @@ export async function POST(request: Request) {
     if (idea.length < 20 || idea.length > 3000) return ok({ error: "Hãy chia sẻ ít nhất 20 ký tự và không quá 3.000 ký tự." }, 422);
     const parsed = parseIdea(idea); const projectId = id("wed"); const conversationId = id("conv"); const proposalId = id("aip");
     const projectName = parsed.location ? `Đám cưới tại ${parsed.location}` : "Kế hoạch cưới của chúng mình";
+    const timelineBlueprint = guidebookPackById["master-timeline"];
+    const budgetBlueprint = guidebookPackById["budget-blueprint"];
     const proposal = {
-      budget: [
-        ["Venue & Ẩm thực", 45], ["Trang trí", 15], ["Photo & Film", 12], ["Trang phục & Makeup", 8], ["Giải trí", 5], ["Thiệp & Quà", 4], ["Di chuyển", 3], ["Dự phòng", 8],
-      ],
-      tasks: ["Chốt ngày và địa điểm tổ chức", "Lập danh sách khách mời sơ bộ", "Xác định 3 ưu tiên ngân sách", "Tạo shortlist vendor đầu tiên"],
-      timeline: ["Khởi động kế hoạch", "Chọn venue và vendor chính", "Chốt concept & thiệp", "Hoàn thiện timeline ngày cưới"],
+      budget: budgetBlueprint.budget ?? [],
+      tasks: timelineBlueprint.tasks.slice(0, 6).map((task) => task.title),
+      timeline: (timelineBlueprint.timeline ?? []).map((item) => item.title),
     };
     const statements = [
       env.DB.prepare(`INSERT INTO wedding_projects (id,owner_id,project_name,wedding_date,location,guest_count,total_budget,planning_status) VALUES (?,?,?,?,?,?,?,'onboarding')`).bind(projectId, ctx.uid, projectName, parsed.weddingDate, parsed.location, parsed.guestCount, parsed.totalBudget),
@@ -140,6 +141,40 @@ export async function POST(request: Request) {
     ];
     await env.DB.batch(statements);
     return ok({ confirmed: true });
+  }
+
+  if (body.action === "apply_guidebook_pack") {
+    const project = await ownedProject(ctx.uid, String(body.projectId ?? ""));
+    if (!project) return ok({ error: "FORBIDDEN" }, 403);
+    const pack = guidebookPackById[String(body.packId ?? "")];
+    if (!pack) return ok({ error: "TEMPLATE_NOT_AVAILABLE" }, 404);
+    const weddingDate = project.wedding_date ? new Date(String(project.wedding_date)) : null;
+    const dueDate = (daysBeforeWedding?: number) => weddingDate && daysBeforeWedding != null
+      ? new Date(weddingDate.getTime() - daysBeforeWedding * 86400000).toISOString()
+      : null;
+    const totalBudget = Number(project.total_budget ?? 0);
+    const statements = [
+      ...pack.tasks.map((task) => env.DB.prepare(`INSERT INTO wedding_tasks (id,wedding_project_id,title,description,category,priority,due_date,source_type)
+        SELECT ?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM wedding_tasks WHERE wedding_project_id=? AND title=?)`)
+        .bind(id("tsk"), project.id, task.title, task.description ?? null, task.category, task.priority ?? "medium", dueDate(task.daysBeforeWedding), `guidebook:${pack.id}`, project.id, task.title)),
+      ...(pack.timeline ?? []).map((item) => env.DB.prepare(`INSERT INTO wedding_timeline_items (id,wedding_project_id,title,description,start_at,status)
+        SELECT ?,?,?,?,?, 'planned' WHERE NOT EXISTS (SELECT 1 FROM wedding_timeline_items WHERE wedding_project_id=? AND title=?)`)
+        .bind(id("tml"), project.id, item.title, item.description, dueDate(item.daysBeforeWedding), project.id, item.title)),
+      ...(pack.budget ?? []).map(([name, percentage], index) => env.DB.prepare(`INSERT INTO budget_categories (id,wedding_project_id,name,allocated_amount,sort_order)
+        VALUES (?,?,?,?,?) ON CONFLICT(wedding_project_id,name) DO NOTHING`)
+        .bind(id("bud"), project.id, name, Math.round(totalBudget * percentage / 100), index + 20)),
+      env.DB.prepare(`INSERT INTO audit_logs (id,actor_id,actor_role,action,entity_type,entity_id,new_values,request_id)
+        VALUES (?,?,'couple','guidebook.applied','wedding_project',?,?,?)`)
+        .bind(id("aud"), ctx.uid, project.id, JSON.stringify({ packId: pack.id, source: pack.sourceLabel }), requestId),
+    ];
+    await env.DB.batch(statements);
+    return ok({
+      applied: true,
+      packId: pack.id,
+      taskCount: pack.tasks.length,
+      timelineCount: pack.timeline?.length ?? 0,
+      budgetCategoryCount: pack.budget?.length ?? 0,
+    });
   }
 
   if (body.action === "toggle_task") {

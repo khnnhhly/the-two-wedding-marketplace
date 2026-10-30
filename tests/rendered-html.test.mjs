@@ -46,3 +46,18 @@ test("AI writes require an explicit proposal confirmation", async () => {
   assert.doesNotMatch(route.slice(start, confirm), /INSERT INTO budget_categories/);
   assert.match(route.slice(confirm), /INSERT INTO budget_categories/);
 });
+
+test("guidebook templates are available and imported idempotently", async () => {
+  const [workspace, templates, route] = await Promise.all([
+    readFile(new URL("../app/workspace/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/workspace/guidebook-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/platform/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(workspace, /GuidebookLibrary/);
+  assert.match(templates, /Timeline tổng quát/);
+  assert.match(templates, /Checklist D-7/);
+  assert.match(templates, /Venue review/);
+  assert.match(route, /apply_guidebook_pack/);
+  assert.match(route, /WHERE NOT EXISTS \(SELECT 1 FROM wedding_tasks/);
+  assert.match(route, /ON CONFLICT\(wedding_project_id,name\) DO NOTHING/);
+});

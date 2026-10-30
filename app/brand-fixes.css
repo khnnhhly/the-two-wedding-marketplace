@@ -1,0 +1,13 @@
+/* The asset already contains the approved royal-blue mark on white. */
+.market-brand .mark {
+  background: #fff;
+  border: 1px solid #e3e5ee;
+}
+
+.market-brand .mark img {
+  width: 39px;
+  height: 39px;
+  object-fit: contain;
+  mix-blend-mode: normal;
+  filter: none;
+}
