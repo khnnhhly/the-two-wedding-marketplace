@@ -1,7 +1,8 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { FormEvent, useMemo, useState } from "react";
-import Image from "next/image";
 
 const categories = [
   ["Địa điểm", "Venue", "⌂"], ["Trang trí", "Decor", "✦"], ["Photo & Film", "Studio", "◉"],
@@ -26,7 +27,7 @@ const products = [
 const formatMoney = (value: number | null) => value == null ? "Liên hệ báo giá" : `Từ ${new Intl.NumberFormat("vi-VN").format(value)}₫`;
 
 function Brand({ light = false }: { light?: boolean }) {
-  return <a className={`market-brand${light ? " light" : ""}`} href="#top" aria-label="the two — trang chủ"><span className="mark"><Image src="/the-two-monogram.png" alt="" width={37} height={40} priority /></span><span className="wordmark">the two<small>wedding marketplace</small></span></a>;
+  return <a className={`market-brand${light ? " light" : ""}`} href="#top" aria-label="the two — trang chủ"><span className="mark"><img src="/the-two-monogram.png" alt="" width="37" height="40" /></span><span className="wordmark">the two<small>wedding marketplace</small></span></a>;
 }
 
 export default function Home() {
