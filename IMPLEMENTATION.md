@@ -1,4 +1,4 @@
-# Nắng platform implementation
+# the two platform implementation
 
 ## Implemented foundation
 

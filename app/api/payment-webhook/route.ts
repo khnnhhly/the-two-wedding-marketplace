@@ -12,7 +12,7 @@ async function hmac(secret: string, body: string) {
 export async function POST(request: Request) {
   const secret = env.PAYMENT_WEBHOOK_SECRET as string | undefined;
   if (!secret) return Response.json({ error: "PAYMENT_PROVIDER_NOT_CONFIGURED" }, { status: 503 });
-  const raw = await request.text(); const signature = request.headers.get("x-nang-signature") ?? "";
+  const raw = await request.text(); const signature = request.headers.get("x-the-two-signature") ?? request.headers.get("x-nang-signature") ?? "";
   if (signature !== await hmac(secret, raw)) return Response.json({ error: "INVALID_SIGNATURE" }, { status: 401 });
   const event = JSON.parse(raw) as { id?: string; obligationId?: string; transactionId?: string; amount?: number; currency?: string; status?: string };
   if (!event.id || !event.obligationId || !event.transactionId || !Number.isInteger(event.amount) || event.status !== "paid") return Response.json({ error: "INVALID_EVENT" }, { status: 422 });

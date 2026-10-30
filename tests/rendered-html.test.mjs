@@ -4,7 +4,8 @@ import test from "node:test";
 
 test("builds the public wedding experience", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-  assert.match(page, /Đám cưới trong mơ/);
+  assert.match(page, /Mọi thứ cho đám cưới/);
+  assert.match(page, /the two/);
   assert.match(page, /AI Wedding Planner/);
   assert.match(page, /href="\/workspace"/);
   assert.doesNotMatch(page, /codex-preview/);

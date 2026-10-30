@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Nắng — Lên kế hoạch cưới cùng AI",
-  description: "Từ ý tưởng đầu tiên đến ngày trọng đại — lên kế hoạch cưới, quản lý ngân sách và khám phá vendor cùng Nắng.",
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
-  openGraph: { title: "Nắng — Đám cưới trong mơ, kế hoạch trong tầm tay", description: "Nền tảng lên kế hoạch cưới thông minh dành cho các cặp đôi Việt Nam.", images: ["/og.png"] },
-  twitter: { card: "summary_large_image", title: "Nắng — Lên kế hoạch cưới cùng AI", description: "Đám cưới trong mơ, kế hoạch trong tầm tay.", images: ["/og.png"] },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "the-two-wedding-marketplace.maplecow69.chatgpt.site";
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${host}`;
+  return {
+    title: "the two — Wedding marketplace, made clear",
+    description: "Marketplace hai chiều giúp cặp đôi tìm vendor, so sánh báo giá và lên kế hoạch cưới; giúp vendor onboard và quản lý kinh doanh tại một nơi.",
+    icons: { icon: "/the-two-monogram.png", shortcut: "/the-two-monogram.png" },
+    openGraph: { title: "the two — Wedding marketplace, made clear", description: "Tìm vendor, so sánh báo giá và quản lý hành trình cưới tại một marketplace rõ ràng.", images: [`${origin}/og-the-two.png`] },
+    twitter: { card: "summary_large_image", title: "the two — Wedding marketplace, made clear", description: "Marketplace cho cặp đôi và wedding vendor tại Việt Nam.", images: [`${origin}/og-the-two.png`] },
+  };
+}
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="vi"><body>{children}</body></html>;
