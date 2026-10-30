@@ -30,11 +30,13 @@ async function seedCatalog() {
     ["ven_theplanners", "The Planners", "the-planners", "Đội ngũ wedding planner với quy trình cá nhân hóa và phạm vi phục vụ Hà Nội, TP.HCM.", "Hà Nội · TP.HCM"],
     ["ven_lumiere", "Lumière Studio", "lumiere-studio", "Photo & Film theo phong cách tự nhiên, giàu cảm xúc.", "Hà Nội"],
     ["ven_moc", "Mộc Concept", "moc-concept", "Thiết kế concept và trang trí tiệc cưới tinh giản, giàu chất liệu.", "TP. Hồ Chí Minh"],
+    ["ven_maison", "Maison de Blanc", "maison-de-blanc", "Bridal studio với phom dáng hiện đại và trải nghiệm thử váy có tư vấn.", "Toàn quốc"],
   ];
   const listings = [
     ["lst_theplanners", "ven_theplanners", "Lập kế hoạch cưới trọn gói", "full-wedding-planning", "consultation", "custom_quote", null],
     ["lst_lumiere", "ven_lumiere", "Phóng sự cưới tự nhiên", "wedding-photo-film", "request_quote", "starting_from", 18000000],
     ["lst_moc", "ven_moc", "Concept & Decoration", "concept-decoration", "request_quote", "starting_from", 35000000],
+    ["lst_maison", "ven_maison", "Bridal fitting & dress", "bridal-fitting", "consultation", "starting_from", 12000000],
   ];
   const plans = [
     ["plan_couple_free", "couple_free", "Couple Free", "couple", "monthly", 0],

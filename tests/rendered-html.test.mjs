@@ -61,3 +61,33 @@ test("guidebook templates are available and imported idempotently", async () => 
   assert.match(route, /WHERE NOT EXISTS \(SELECT 1 FROM wedding_tasks/);
   assert.match(route, /ON CONFLICT\(wedding_project_id,name\) DO NOTHING/);
 });
+
+test("core marketplace actions have dedicated routes instead of workspace fallbacks", async () => {
+  const [home, vendorPage, templatePage, planningPage, onboardingPage] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/vendors/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/templates/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/planning/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/vendor-onboarding/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(home, /href="\/vendors"/);
+  assert.match(home, /href="\/templates"/);
+  assert.match(home, /href="\/for-vendors"/);
+  assert.match(home, /href="\/vendor-onboarding"/);
+  assert.match(vendorPage, /\/vendors\/\$\{vendor\.slug\}/);
+  assert.match(templatePage, /\/templates\/\$\{item\.slug\}/);
+  assert.match(planningPage, /the-two-planning-draft/);
+  assert.match(onboardingPage, /register_vendor/);
+});
+
+test("vendor center is ownership scoped and AI guide is available", async () => {
+  const [route, center, guide] = await Promise.all([
+    readFile(new URL("../app/api/vendor-center/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/vendor-center/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/AiConcierge.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(route, /WHERE owner_id=\?/);
+  assert.match(route, /WHERE i\.vendor_id=\?/);
+  assert.match(center, /Inquiry ≠ Booking/);
+  assert.match(guide, /the two AI guide/);
+});
