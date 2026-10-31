@@ -73,6 +73,31 @@ export const vendors = sqliteTable("vendors", {
   businessEmail: text("business_email"), businessPhone: text("business_phone"), location: text("location"), serviceAreas: text("service_areas"), verificationStatus: text("verification_status").notNull().default("draft"),
   accountStatus: text("account_status").notNull().default("active"), acceptingInquiries: integer("accepting_inquiries", { mode: "boolean" }).notNull().default(true), ...timestamps,
 }, (t) => [check("vendor_verification_check", sql`${t.verificationStatus} in ('draft','pending_review','approved','rejected','suspended')`)]);
+export const vendorApplications = sqliteTable("vendor_applications", {
+  id: text("id").primaryKey(),
+  vendorId: text("vendor_id").notNull().references(() => vendors.id).unique(),
+  applicantUserId: text("applicant_user_id").notNull().references(() => profiles.id),
+  applicantName: text("applicant_name").notNull(),
+  applicantEmail: text("applicant_email").notNull(),
+  businessName: text("business_name").notNull(),
+  category: text("category").notNull(),
+  location: text("location").notNull(),
+  website: text("website"),
+  description: text("description").notNull(),
+  reviewStatus: text("review_status").notNull().default("pending_review"),
+  notificationEmail: text("notification_email").notNull().default("thetwoplanner@gmail.com"),
+  emailStatus: text("email_status").notNull().default("queued"),
+  emailProviderId: text("email_provider_id"),
+  emailError: text("email_error"),
+  emailedAt: text("emailed_at"),
+  submittedAt: text("submitted_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  ...timestamps,
+}, (t) => [
+  index("vendor_applications_status_idx").on(t.reviewStatus, t.submittedAt),
+  index("vendor_applications_email_status_idx").on(t.emailStatus),
+  check("vendor_application_review_status_check", sql`${t.reviewStatus} in ('pending_review','approved','rejected','needs_more_info')`),
+  check("vendor_application_email_status_check", sql`${t.emailStatus} in ('queued','sending','sent','failed')`),
+]);
 export const vendorMembers = sqliteTable("vendor_members", {
   id: text("id").primaryKey(), vendorId: text("vendor_id").notNull().references(() => vendors.id), userId: text("user_id").notNull().references(() => profiles.id), vendorRole: text("vendor_role").notNull(), createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 }, (t) => [uniqueIndex("vendor_members_vendor_user_uq").on(t.vendorId, t.userId)]);

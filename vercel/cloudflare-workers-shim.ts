@@ -12,4 +12,8 @@ const unavailableBinding = new Proxy(
 export const env = {
   DB: unavailableBinding,
   PAYMENT_WEBHOOK_SECRET: undefined,
+  RESEND_API_KEY: undefined,
+  VENDOR_NOTIFICATION_FROM: undefined,
+  VENDOR_NOTIFICATION_TO: undefined,
+  VENDOR_ADMIN_EMAILS: undefined,
 };

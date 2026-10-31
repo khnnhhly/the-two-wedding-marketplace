@@ -1,5 +1,9 @@
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "../../chatgpt-auth";
+import {
+  sendVendorApplicationEmail,
+  vendorNotificationRecipient,
+} from "../../vendor-notification";
 import { guidebookPackById } from "../../workspace/guidebook-data";
 
 export const dynamic = "force-dynamic";
@@ -222,15 +226,63 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "register_vendor") {
-    const name = String(body.businessName ?? "").trim(); if (name.length < 3) return ok({ error: "Tên doanh nghiệp chưa hợp lệ." }, 422);
-    const vendorId = id("ven"); const slug = `${name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${vendorId.slice(-5)}`;
+    const name = String(body.businessName ?? "").trim();
+    const category = String(body.category ?? "Khác").trim();
+    const location = String(body.location ?? "").trim();
+    const website = String(body.website ?? "").trim();
+    const description = String(body.description ?? "").trim();
+    if (name.length < 3 || name.length > 160) return ok({ error: "Tên doanh nghiệp chưa hợp lệ." }, 422);
+    if (category.length < 2 || category.length > 100) return ok({ error: "Vui lòng chọn nhóm dịch vụ chính." }, 422);
+    if (location.length < 2 || location.length > 180) return ok({ error: "Khu vực hoạt động chưa hợp lệ." }, 422);
+    if (description.length < 20 || description.length > 5000) return ok({ error: "Giới thiệu cần từ 20 đến 5.000 ký tự." }, 422);
+    if (website) {
+      try {
+        const url = new URL(website);
+        if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid protocol');
+      } catch {
+        return ok({ error: "Website cần là đường dẫn http:// hoặc https:// hợp lệ." }, 422);
+      }
+    }
+    const vendorId = id("ven");
+    const applicationId = id("vapp");
+    const outboxId = id("out");
+    const submittedAt = now();
+    const notificationEmail = vendorNotificationRecipient();
+    const slug = `${name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${vendorId.slice(-5)}`;
     await env.DB.batch([
-      env.DB.prepare(`INSERT INTO vendors (id,owner_id,business_name,slug,description,business_email,location,service_areas,verification_status) VALUES (?,?,?,?,?,?,?,?,'pending_review')`).bind(vendorId, ctx.uid, name, slug, String(body.description ?? ""), ctx.user.email, String(body.location ?? ""), String(body.location ?? "")),
+      env.DB.prepare(`INSERT INTO vendors (id,owner_id,business_name,slug,description,business_email,location,service_areas,verification_status) VALUES (?,?,?,?,?,?,?,?,'pending_review')`).bind(vendorId, ctx.uid, name, slug, description, ctx.user.email, location, location),
       env.DB.prepare(`INSERT INTO vendor_members (id,vendor_id,user_id,vendor_role) VALUES (?,?,?,'owner')`).bind(id("vmem"), vendorId, ctx.uid),
       env.DB.prepare(`INSERT INTO user_roles (id,user_id,role) VALUES (?,?, 'vendor') ON CONFLICT(user_id,role) DO NOTHING`).bind(id("role"), ctx.uid),
-      env.DB.prepare(`INSERT INTO outbox_events (id,event_type,aggregate_type,aggregate_id,event_payload,idempotency_key) VALUES (?,'VENDOR_APPLICATION_SUBMITTED','vendor',?,?,?)`).bind(id("out"), vendorId, JSON.stringify({ vendorId }), `vendor-application:${vendorId}`),
+      env.DB.prepare(`INSERT INTO vendor_applications (id,vendor_id,applicant_user_id,applicant_name,applicant_email,business_name,category,location,website,description,notification_email,email_status,submitted_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,'queued',?)`).bind(applicationId, vendorId, ctx.uid, ctx.user.displayName, ctx.user.email, name, category, location, website || null, description, notificationEmail, submittedAt),
+      env.DB.prepare(`INSERT INTO outbox_events (id,event_type,aggregate_type,aggregate_id,event_payload,idempotency_key) VALUES (?,'VENDOR_APPLICATION_SUBMITTED','vendor_application',?,?,?)`).bind(outboxId, applicationId, JSON.stringify({ applicationId, vendorId, businessName: name, category, location, website: website || null, applicantName: ctx.user.displayName, applicantEmail: ctx.user.email, notificationEmail, submittedAt }), `vendor-application:${applicationId}`),
     ]);
-    return ok({ vendorId, status: "pending_review" }, 201);
+    await env.DB.prepare(`UPDATE vendor_applications SET email_status='sending',updated_at=CURRENT_TIMESTAMP WHERE id=? AND email_status='queued'`).bind(applicationId).run();
+    const email = await sendVendorApplicationEmail({
+      applicationId,
+      vendorId,
+      applicantName: ctx.user.displayName,
+      applicantEmail: ctx.user.email,
+      businessName: name,
+      category,
+      location,
+      website: website || null,
+      description,
+      submittedAt,
+      adminUrl: `${new URL(request.url).origin}/admin/vendor-applications`,
+    });
+    if (email.status === "sent") {
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE vendor_applications SET email_status='sent',email_provider_id=?,email_error=NULL,emailed_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(email.providerId, now(), applicationId),
+        env.DB.prepare(`UPDATE outbox_events SET processing_status='processed',processed_at=? WHERE id=?`).bind(now(), outboxId),
+      ]);
+    } else {
+      const status = email.status === "queued" ? "queued" : "failed";
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE vendor_applications SET email_status=?,email_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(status, email.error, applicationId),
+        env.DB.prepare(`UPDATE outbox_events SET processing_status=?,retry_count=CASE WHEN ?='failed' THEN retry_count+1 ELSE retry_count END,next_retry_at=CASE WHEN ?='failed' THEN datetime('now','+15 minutes') ELSE NULL END WHERE id=?`).bind(status === "failed" ? "failed" : "pending", status, status, outboxId),
+      ]);
+    }
+    return ok({ vendorId, applicationId, status: "pending_review", emailStatus: email.status }, 201);
   }
 
   if (body.action === "select_plan") {

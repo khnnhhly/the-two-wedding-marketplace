@@ -92,6 +92,25 @@ test("vendor center is ownership scoped and AI guide is available", async () => 
   assert.match(guide, /the two AI guide/);
 });
 
+test("vendor applications are stored, emailed, and exportable for Google Sheets", async () => {
+  const [platform, notification, adminRoute, adminPage, migration] = await Promise.all([
+    readFile(new URL("../app/api/platform/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/vendor-notification.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/admin/vendor-applications/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/vendor-applications/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0001_pale_ronan.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(platform, /INSERT INTO vendor_applications/);
+  assert.match(platform, /VENDOR_APPLICATION_SUBMITTED/);
+  assert.match(notification, /thetwoplanner@gmail\.com/);
+  assert.match(notification, /https:\/\/api\.resend\.com\/emails/);
+  assert.match(adminRoute, /text\/csv/);
+  assert.match(adminRoute, /retry_email/);
+  assert.match(adminPage, /Tải CSV cho Google Sheets/);
+  assert.match(migration, /CREATE TABLE `vendor_applications`/);
+  assert.match(migration, /vendor_application_email_status_check/);
+});
+
 test("couple discovery turns insight into a category-led lookup flow", async () => {
   const [planning, vendors, discovery] = await Promise.all([
     readFile(new URL("../app/planning/page.tsx", import.meta.url), "utf8"),

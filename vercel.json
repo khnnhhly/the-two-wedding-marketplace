@@ -5,6 +5,11 @@
   "regions": ["sin1"],
   "redirects": [
     {
+      "source": "/admin/:path*",
+      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/admin/:path*",
+      "permanent": false
+    },
+    {
       "source": "/workspace",
       "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/workspace",
       "permanent": false

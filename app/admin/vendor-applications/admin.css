@@ -1,0 +1,136 @@
+.vendor-admin-page {
+  background: #f7f5f0;
+}
+
+.vendor-admin-hero {
+  background: var(--royal);
+  color: #fff;
+  padding: 64px 0 44px;
+}
+
+.vendor-admin-hero .eyebrow {
+  color: #ffb28d !important;
+}
+
+.vendor-admin-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 30px;
+}
+
+.vendor-admin-heading h1 {
+  font-size: 48px;
+  letter-spacing: -.045em;
+  margin: 0 0 10px;
+}
+
+.vendor-admin-heading p {
+  max-width: 700px;
+  color: #d8def7;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.vendor-admin-content {
+  padding: 46px 0 90px;
+}
+
+.vendor-admin-table-wrap {
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.vendor-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1080px;
+}
+
+.vendor-admin-table th {
+  background: #eef1fb;
+  color: var(--royal);
+  font-size: 8px;
+  letter-spacing: .11em;
+  text-align: left;
+  text-transform: uppercase;
+  padding: 13px;
+}
+
+.vendor-admin-table td {
+  vertical-align: top;
+  border-top: 1px solid var(--line);
+  padding: 15px 13px;
+  font-size: 10px;
+}
+
+.vendor-admin-table td > strong,
+.vendor-admin-table td > span,
+.vendor-admin-table td > a,
+.vendor-admin-table td > small {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.vendor-admin-table td > a,
+.vendor-admin-table summary {
+  color: var(--cobalt);
+}
+
+.vendor-admin-table details {
+  max-width: 260px;
+}
+
+.vendor-admin-table summary {
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.vendor-admin-table details p {
+  white-space: pre-line;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.email-status {
+  width: max-content;
+  border-radius: 20px;
+  padding: 6px 9px;
+  font-size: 8px !important;
+  font-weight: 800;
+}
+
+.email-status.sent { background: #e2f5e9; color: #267142; }
+.email-status.queued { background: #fff1d6; color: #8a6200; }
+.email-status.sending { background: #e8edff; color: var(--royal); }
+.email-status.failed { background: #fde8e5; color: #9c2e22; }
+
+.table-action {
+  border: 1px solid var(--cobalt);
+  background: #fff;
+  color: var(--cobalt);
+  padding: 8px 10px;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.table-action:disabled { opacity: .5; }
+
+.admin-empty {
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 46px;
+  text-align: center;
+}
+
+.admin-empty h2 { font-size: 26px; }
+.admin-empty p { font-size: 11px; color: var(--muted); margin-bottom: 22px; }
+
+@media (max-width: 720px) {
+  .vendor-admin-heading { display: block; }
+  .vendor-admin-heading h1 { font-size: 38px; }
+  .vendor-admin-heading .primary-market-btn { margin-top: 24px; }
+  .vendor-admin-content { padding-top: 25px; }
+}

@@ -24,7 +24,7 @@ export default function VendorOnboardingPage() {
     if (auth !== "signed-in") { window.location.href = "/signin-with-chatgpt?return_to=%2Fvendor-onboarding"; return; }
     setBusy(true); setMessage("");
     try {
-      const response = await fetch("/api/platform", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "register_vendor", businessName: form.businessName, location: form.location, description: `${form.description}\nDanh mục: ${form.category}${form.website ? `\nWebsite: ${form.website}` : ""}` }) });
+      const response = await fetch("/api/platform", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "register_vendor", ...form }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Không thể gửi hồ sơ");
       sessionStorage.removeItem("the-two-vendor-draft");
