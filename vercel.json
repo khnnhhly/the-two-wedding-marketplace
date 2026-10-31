@@ -1,0 +1,43 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npx next build --webpack",
+  "framework": "nextjs",
+  "regions": ["sin1"],
+  "redirects": [
+    {
+      "source": "/workspace",
+      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/workspace",
+      "permanent": false
+    },
+    {
+      "source": "/vendor-center",
+      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/vendor-center",
+      "permanent": false
+    },
+    {
+      "source": "/vendor-onboarding",
+      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/vendor-onboarding",
+      "permanent": false
+    },
+    {
+      "source": "/signin-with-chatgpt",
+      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/signin-with-chatgpt",
+      "permanent": false
+    },
+    {
+      "source": "/signout-with-chatgpt",
+      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/signout-with-chatgpt",
+      "permanent": false
+    },
+    {
+      "source": "/callback",
+      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/callback",
+      "permanent": false
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/api/:path*",
+      "permanent": false
+    }
+  ]
+}

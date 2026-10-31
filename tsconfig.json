@@ -30,5 +30,13 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "worker",
+    "build",
+    "**/* 2.ts",
+    "**/* 2.tsx",
+    "**/* 3.ts",
+    "**/* 3.tsx"
+  ]
 }
