@@ -1,86 +1,112 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, @next/next/no-html-link-for-pages, @next/next/no-img-element */
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+/* eslint-disable react-hooks/set-state-in-effect, @next/next/no-img-element, @next/next/no-html-link-for-pages */
+
+import { useEffect, useState } from "react";
+import { formatWeddingMonth } from "../data/discovery";
+import { BudgetTab } from "./BudgetTab";
+import { ChecklistTab } from "./ChecklistTab";
+import { GuidebookTab } from "./GuidebookTab";
+import { OverviewTab } from "./OverviewTab";
+import { SettingsTab } from "./SettingsTab";
+import { readShortlist } from "../components/Shortlist";
+import { progress, rememberPendingPack, trackVendor, useWorkspace, type Workspace } from "./store";
+import { VendorsTab } from "./VendorsTab";
 import "./workspace.css";
-import "./workspace-theme.css";
-import "./guidebook.css";
-import { guidebookPacks, type GuidebookPack } from "./guidebook-data";
 
-type Row = Record<string, any>;
-type Data = {
-  user?: { name: string; email: string }; project?: Row | null; tasks?: Row[]; budgets?: Row[]; timeline?: Row[];
-  vendors?: Row[]; inquiries?: Row[]; bookings?: Row[]; shortlists?: Row[]; subscriptions?: Row[]; notifications?: Row[];
-  error?: string; message?: string;
-};
+export type TabId = "overview" | "checklist" | "budget" | "vendors" | "guidebook" | "settings";
 
-const money = (n?: number | null) => n == null ? "Liên hệ báo giá" : new Intl.NumberFormat("vi-VN").format(n) + "₫";
-const statusLabel: Record<string,string> = {
-  INQUIRY_SUBMITTED:"Đã gửi yêu cầu", VENDOR_REVIEWING:"Vendor đang xem", QUOTATION_SENT:"Đã nhận báo giá", NEGOTIATING:"Đang thương lượng",
-  AWAITING_PAYMENT:"Chờ thanh toán", AWAITING_VENDOR_CONFIRMATION:"Chờ vendor xác nhận", CONFIRMED:"Đã xác nhận", pending:"Chờ thanh toán", active:"Đang hoạt động",
-};
+const tabs: { id: TabId; label: string; icon: string }[] = [
+  { id: "overview", label: "Tổng quan", icon: "⌂" },
+  { id: "checklist", label: "Checklist", icon: "✓" },
+  { id: "budget", label: "Ngân sách", icon: "₫" },
+  { id: "vendors", label: "Vendor", icon: "⌖" },
+  { id: "guidebook", label: "Guidebook", icon: "▦" },
+  { id: "settings", label: "Thông tin cưới", icon: "⚙" },
+];
 
-async function post(body: Row) {
-  const response = await fetch("/api/platform", { method: "POST", headers: { "content-type": "application/json", "x-request-id": crypto.randomUUID() }, body: JSON.stringify(body) });
-  const result = await response.json(); if (!response.ok) throw new Error(result.error ?? "Không thể hoàn tất thao tác"); return result;
+const isTab = (value: string | null): value is TabId => tabs.some(tab => tab.id === value);
+
+export default function WorkspacePage() {
+  const workspace = useWorkspace();
+  const [tab, setTab] = useState<TabId>("overview");
+  const [pack, setPack] = useState<string | null>(null);
+  const [welcome, setWelcome] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("tab");
+    if (isTab(requested)) setTab(requested);
+    setPack(params.get("pack"));
+    setWelcome(params.get("welcome") === "1");
+  }, []);
+
+  function open(next: TabId) {
+    setTab(next);
+    const params = new URLSearchParams(window.location.search);
+    params.delete("welcome");
+    params.delete("pack");
+    if (next === "overview") params.delete("tab"); else params.set("tab", next);
+    window.history.replaceState({}, "", `/workspace${params.size ? `?${params}` : ""}`);
+    window.scrollTo({ top: 0 });
+  }
+
+  // Vendors saved with ♡ before the workspace existed join the vendor list.
+  const ready = Boolean(workspace);
+  useEffect(() => {
+    if (!ready) return;
+    const tracked = new Set((workspace?.vendors ?? []).map(vendor => vendor.slug));
+    readShortlist().filter(slug => !tracked.has(slug)).forEach(slug => trackVendor(slug, {}));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
+  if (workspace === undefined) return <div className="ws-state"><span>✦</span><p>Đang mở Workspace…</p></div>;
+  if (workspace === null) return <EmptyWorkspace pack={pack}/>;
+
+  return <div className="ws">
+    <aside className="ws-side">
+      <a className="ws-brand" href="/"><img src="/the-two-monogram.png" alt="" width="30" height="32"/><span>the two</span></a>
+      <ProjectCard workspace={workspace}/>
+      <nav aria-label="Workspace">{tabs.map(item => <button key={item.id} className={tab === item.id ? "active" : ""} aria-current={tab === item.id ? "page" : undefined} onClick={() => open(item.id)}><i aria-hidden="true">{item.icon}</i>{item.label}{item.id === "checklist" && <Badge workspace={workspace}/>}</button>)}</nav>
+      <div className="ws-side-links"><a href="/vendors">← Marketplace</a><a href="/planning">Làm lại 3 bước</a></div>
+    </aside>
+    <main className="ws-main" id="main">
+      {welcome && <div className="ws-banner" role="status"><b>Workspace đã sẵn sàng.</b> Checklist đã được xếp lịch theo ngày cưới và ngân sách đã chia theo hạng mục. Bắt đầu với việc đầu tiên bên dưới.<button aria-label="Đóng thông báo" onClick={() => setWelcome(false)}>×</button></div>}
+      {tab === "overview" && <OverviewTab workspace={workspace} open={open}/>}
+      {tab === "checklist" && <ChecklistTab workspace={workspace}/>}
+      {tab === "budget" && <BudgetTab workspace={workspace}/>}
+      {tab === "vendors" && <VendorsTab workspace={workspace}/>}
+      {tab === "guidebook" && <GuidebookTab workspace={workspace} highlight={pack}/>}
+      {tab === "settings" && <SettingsTab workspace={workspace}/>}
+    </main>
+  </div>;
 }
 
-export default function Workspace() {
-  const [data,setData] = useState<Data>({}); const [loading,setLoading]=useState(true); const [busy,setBusy]=useState(false);
-  const [tab,setTab]=useState("overview"); const [idea,setIdea]=useState("Mình muốn tổ chức đám cưới ở Hà Nội vào tháng 12/2027, khoảng 250 khách, ngân sách 400 triệu.");
-  const [proposal,setProposal]=useState<Row|null>(null); const [toast,setToast]=useState(""); const [inquiry,setInquiry]=useState<Row|null>(null);
-  const [brief,setBrief]=useState(""); const [vendorForm,setVendorForm]=useState(false);
-  const [initialPack,setInitialPack]=useState(""); const [desiredListing,setDesiredListing]=useState(""); const [authReturnTo,setAuthReturnTo]=useState("/workspace");
-  const load=useCallback(async()=>{setLoading(true);try{const r=await fetch("/api/platform",{cache:"no-store"});setData(await r.json())}finally{setLoading(false)}},[]);
-  useEffect(()=>{const params=new URLSearchParams(window.location.search);const saved=params.get("idea")??sessionStorage.getItem("the-two-planning-draft")??localStorage.getItem("the-two-planning-draft");if(saved)setIdea(saved.slice(0,2000));const requestedTab=params.get("tab");if(requestedTab)setTab(requestedTab);const pack=params.get("pack");if(pack)setInitialPack(pack);const listing=params.get("listing");if(listing){setDesiredListing(listing);setTab("vendors")}setAuthReturnTo(`${window.location.pathname}${window.location.search}`);load()},[load]);
-  useEffect(()=>{if(!desiredListing||!data.vendors?.length)return;const vendor=data.vendors.find(item=>item.listing_id===desiredListing);if(vendor){setInquiry(vendor);setDesiredListing("")}},[data.vendors,desiredListing]);
-  const notify=(text:string)=>{setToast(text);setTimeout(()=>setToast(""),2200)};
-  const act=async(body:Row,success:string)=>{setBusy(true);try{await post(body);notify(success);await load()}catch(e){notify(e instanceof Error?e.message:"Có lỗi xảy ra")}finally{setBusy(false)}};
-  const completion=useMemo(()=>{const tasks=data.tasks??[];return tasks.length?Math.round(tasks.filter(t=>t.status==="completed").length/tasks.length*100):0},[data.tasks]);
-  const budgetTotal=(data.budgets??[]).reduce((n,b)=>n+Number(b.allocated_amount||0),0);
-  const appliedGuidebooks=useMemo(()=>new Set((data.tasks??[]).map(task=>String(task.source_type??"")).filter(source=>source.startsWith("guidebook:")).map(source=>source.slice("guidebook:".length))),[data.tasks]);
-
-  async function start(e:FormEvent){e.preventDefault();setBusy(true);try{const result=await post({action:"start_onboarding",idea});setProposal({...result.proposal,proposalId:result.proposalId,projectId:result.projectId,parsed:result.parsed});notify("AI đã tạo bản đề xuất — bạn quyết định trước khi lưu.")}catch(e){notify(e instanceof Error?e.message:"Không thể tạo kế hoạch")}finally{setBusy(false)}}
-  async function confirm(){if(!proposal)return;await act({action:"confirm_ai_plan",projectId:proposal.projectId,proposalId:proposal.proposalId},"Kế hoạch đã được lưu an toàn");setProposal(null)}
-  function openInquiry(v:Row){setInquiry(v);setBrief("")}
-  function aiBrief(){if(!data.project||!inquiry)return;setBrief(`Chúng mình dự kiến tổ chức đám cưới${data.project.location?` tại ${data.project.location}`:""}${data.project.wedding_date?` vào ${new Date(data.project.wedding_date).toLocaleDateString("vi-VN",{month:"long",year:"numeric"})}`:""}${data.project.guest_count?` với khoảng ${data.project.guest_count} khách`:""}. Chúng mình quan tâm đến dịch vụ ${inquiry.title} và mong muốn nhận tư vấn rõ về phạm vi công việc, các hạng mục bao gồm, chi phí phát sinh và lịch thanh toán.`)}
-  async function sendInquiry(e:FormEvent){e.preventDefault();if(!inquiry||!data.project)return;await act({action:"submit_inquiry",projectId:data.project.id,listingId:inquiry.listing_id,requirements:brief,idempotencyKey:crypto.randomUUID()},"Yêu cầu đã gửi — đây chưa phải booking");setInquiry(null)}
-
-  if(loading)return <div className="ws-loading"><span>✦</span><p>Đang mở Wedding Workspace…</p></div>;
-  if(data.error==="AUTH_REQUIRED")return <div className="ws-auth"><span className="sun">✦</span><h1>Không gian cưới riêng của bạn</h1><p>Đăng nhập để lưu kế hoạch, ngân sách và mọi trao đổi với vendor một cách an toàn.</p><a className="button" href={`/signin-with-chatgpt?return_to=${encodeURIComponent(authReturnTo)}`}>Đăng nhập để tiếp tục →</a><a href="/">Về trang chủ</a></div>;
-
-  if(!data.project)return <main className="onboard-page"><header className="ws-top"><a className="brand the-two-workspace-brand" href="/"><span className="workspace-logo-mark"><img src="/the-two-monogram.png" alt=""/></span><span className="workspace-wordmark">the two</span></a><div><span>Xin chào, {data.user?.name}</span><a href="/signout-with-chatgpt?return_to=%2F">Đăng xuất</a></div></header><section className="onboard-shell"><div className="onboard-copy"><p className="section-label">WEDDING WORKSPACE</p><h1>Bắt đầu bằng điều<br/><em>hai bạn đang hình dung.</em></h1><p>the two AI ghi nhận đúng những gì bạn chia sẻ, để trống điều chưa chắc chắn và đề xuất một bản kế hoạch để bạn duyệt trước khi lưu.</p><div className="trust-list"><span>✓ Không tự điền thông tin còn thiếu</span><span>✓ Mọi thay đổi từ AI đều cần bạn xác nhận</span><span>✓ Kế hoạch được lưu riêng cho tài khoản này</span></div></div><form className="onboard-card" onSubmit={start}><label htmlFor="idea">Ý tưởng đám cưới của bạn</label><textarea id="idea" value={idea} onChange={e=>setIdea(e.target.value)} rows={8}/><button className="button" disabled={busy}>{busy?"Đang chuẩn bị…":"Tạo bản kế hoạch đầu tiên →"}</button><small>AI có thể mắc lỗi. Bạn luôn là người duyệt cuối cùng.</small></form></section>{proposal&&<PlanProposal proposal={proposal} onConfirm={confirm} onClose={()=>setProposal(null)} busy={busy}/>} {toast&&<div className="toast" role="status">{toast}</div>}</main>;
-
-  const tabs=[['overview','Tổng quan'],['plan','Kế hoạch'],['guidebook','Guidebook'],['vendors','Vendor'],['inquiries','Yêu cầu & báo giá'],['bookings','Booking'],['premium','Premium']];
-  return <main className="workspace-page">
-    {toast&&<div className="toast" role="status">{toast}</div>}
-    <aside className="ws-sidebar"><a className="brand ws-brand the-two-workspace-brand" href="/"><span className="workspace-logo-mark"><img src="/the-two-monogram.png" alt=""/></span><span className="workspace-wordmark">the two</span></a><div className="project-switch"><small>WEDDING PROJECT</small><strong>{data.project.project_name}</strong><span>{data.project.wedding_date?new Date(data.project.wedding_date).toLocaleDateString("vi-VN",{month:"long",year:"numeric"}):"Chưa chốt ngày"} · {data.project.location??"Chưa chốt nơi"}</span></div><nav>{tabs.map(([key,label])=><button className={tab===key?"active":""} key={key} onClick={()=>setTab(key)}><i>{({overview:'⌂',plan:'✓',guidebook:'▦',vendors:'⌖',inquiries:'↔',bookings:'◇',premium:'✦'} as Row)[key]}</i>{label}{key==='inquiries'&&(data.inquiries?.length??0)>0&&<b>{data.inquiries?.length}</b>}</button>)}</nav><div className="ws-side-bottom"><a href="/vendor-onboarding">＋ Trở thành vendor</a><a href="/">← Marketplace</a></div></aside>
-    <section className="ws-main"><header className="ws-main-head"><div><p>{new Intl.DateTimeFormat("vi-VN",{weekday:"long",day:"2-digit",month:"long"}).format(new Date())}</p><h1>{tab==='overview'?`Chào ${data.user?.name?.split(' ')[0]}, mình cùng tiếp tục nhé.`:tabs.find(x=>x[0]===tab)?.[1]}</h1></div><div className="head-actions"><button className="notify-bell" title="Thông báo">♢<b>{data.notifications?.length??0}</b></button><span>{data.user?.name?.slice(0,1).toUpperCase()}</span></div></header>
-
-      {tab==='overview'&&<><section className="overview-hero"><div><span>CÒN 13 THÁNG</span><h2>Mỗi việc nhỏ hôm nay<br/><em>đưa hai bạn gần hơn đến ngày cưới.</em></h2><button onClick={()=>setTab('plan')}>Xem việc tiếp theo →</button></div><div className="countdown"><b>397</b><span>ngày</span><i/><b>09</b><span>giờ</span><i/><b>24</b><span>phút</span></div></section><div className="metric-grid"><Metric label="Ngân sách dự kiến" value={money(data.project.total_budget)} sub={`${money(budgetTotal)} đã được phân bổ`} accent="sage"/><Metric label="Checklist" value={`${completion}%`} sub={`${data.tasks?.filter(t=>t.status==='completed').length??0}/${data.tasks?.length??0} đầu việc hoàn tất`} accent="gold"/><Metric label="Vendor" value={`${data.shortlists?.length??0} đã lưu`} sub={`${data.inquiries?.length??0} yêu cầu đang theo dõi`} accent="clay"/><Metric label="Booking" value={`${data.bookings?.length??0}`} sub="Chỉ xác nhận sau đủ điều kiện" accent="ink"/></div><div className="dashboard-grid"><section className="panel next-tasks"><PanelTitle kicker="TIẾP THEO" title="Việc cần làm" action="Xem kế hoạch" onClick={()=>setTab('plan')}/>{data.tasks?.slice(0,4).map(t=><Task key={t.id} row={t} onToggle={()=>act({action:'toggle_task',taskId:t.id},t.status==='completed'?'Đã mở lại đầu việc':'Đã hoàn thành')}/>)}</section><section className="panel ai-advice"><span>✦</span><p>GỢI Ý TỪ THE TWO AI</p><h3>Ưu tiên chốt venue trước khi tinh chỉnh concept.</h3><p>Venue quyết định sức chứa, phong cách không gian và gần một nửa ngân sách dự kiến của bạn.</p><button onClick={()=>setTab('vendors')}>Tìm venue phù hợp →</button></section></div></>}
-
-      {tab==='plan'&&<div className="plan-layout"><section className="panel"><PanelTitle kicker="CHECKLIST" title="Kế hoạch của hai bạn" action={`${completion}% hoàn tất`}/>{data.tasks?.map(t=><Task key={t.id} row={t} onToggle={()=>act({action:'toggle_task',taskId:t.id},'Đã cập nhật checklist')}/>)}</section><section className="panel budget-panel"><PanelTitle kicker="NGÂN SÁCH" title={money(data.project.total_budget)}/><div className="budget-ring" style={{'--pct':'72%'} as any}><div><b>{money(budgetTotal)}</b><span>đã phân bổ</span></div></div>{data.budgets?.map(b=><div className="budget-row" key={b.id}><i/><span>{b.name}</span><strong>{money(b.allocated_amount)}</strong></div>)}<small>Số đã thanh toán chỉ được tính từ giao dịch được xác minh.</small></section></div>}
-
-      {tab==='guidebook'&&<GuidebookLibrary packs={guidebookPacks} initialPack={initialPack} applied={appliedGuidebooks} busy={busy} onApply={(pack)=>act({action:'apply_guidebook_pack',projectId:data.project!.id,packId:pack.id},`Đã thêm ${pack.title} vào kế hoạch`)}/>}
-
-      {tab==='vendors'&&<><div className="market-toolbar"><div><p className="section-label">MARKETPLACE ĐÃ XÁC MINH</p><h2>Tìm người đồng hành phù hợp</h2></div><div className="search-pill">⌕ Tìm theo địa điểm, dịch vụ…</div></div><div className="ws-vendor-grid">{data.vendors?.map(v=>{const saved=data.shortlists?.some(s=>s.listing_id===v.listing_id);return <article className="ws-vendor" key={v.listing_id}><div className={`vendor-art ${v.slug}`}><span>✓ Đã xác minh</span><button onClick={()=>act({action:'shortlist',projectId:data.project!.id,listingId:v.listing_id},saved?'Đã bỏ lưu':'Đã lưu vendor')}>{saved?'♥':'♡'}</button><b>{v.business_name.slice(0,1)}</b></div><div><small>{v.booking_type==='consultation'?'TƯ VẤN TRƯỚC':v.booking_type==='instant'?'ĐẶT NGAY':'YÊU CẦU BÁO GIÁ'}</small><h3>{v.business_name}</h3><p>{v.description}</p><span>⌖ {v.location}</span><strong>{money(v.starting_price_amount)}</strong><button className="button" onClick={()=>openInquiry(v)}>Yêu cầu báo giá →</button></div></article>})}</div></>}
-
-      {tab==='inquiries'&&<section className="panel table-panel"><PanelTitle kicker="THEO DÕI TẬP TRUNG" title="Yêu cầu & báo giá" action="Trạng thái thực"/><div className="flow-legend"><span>Yêu cầu</span><i>→</i><span>Vendor xem</span><i>→</i><span>Báo giá</span><i>→</i><span>Chấp nhận</span><i>→</i><span>Booking</span></div>{!data.inquiries?.length?<Empty icon="↔" title="Chưa có yêu cầu nào" text="Khám phá vendor và gửi brief đầu tiên. Yêu cầu báo giá không tạo booking." action={()=>setTab('vendors')}/>:<div className="data-table">{data.inquiries.map(i=><div className="data-row" key={i.id}><span><small>{i.inquiry_number}</small><b>{i.business_name}</b><em>{i.listing_title}</em></span><span><small>NGÀY CƯỚI</small>{i.requested_date?new Date(i.requested_date).toLocaleDateString('vi-VN'):'Chưa chốt'}</span><span><small>TRẠNG THÁI</small><mark>{statusLabel[i.status]??i.status}</mark></span><button>Chi tiết →</button></div>)}</div>}</section>}
-
-      {tab==='bookings'&&<section className="panel table-panel"><PanelTitle kicker="HỢP ĐỒNG & THANH TOÁN" title="Booking của hai bạn" action="Không có trạng thái giả"/>{!data.bookings?.length?<Empty icon="◇" title="Chưa có booking" text="Booking chỉ được tạo sau khi bạn chấp nhận một phiên bản báo giá còn hiệu lực." action={()=>setTab('inquiries')}/>:data.bookings.map(b=><div className="booking-card" key={b.id}><div><small>{b.booking_number}</small><h3>{b.business_name}</h3><span>{statusLabel[b.status]??b.status}</span></div><div><small>GIÁ TRỊ HỢP ĐỒNG</small><b>{money(b.contract_value)}</b><p>Đã xác minh: {money(b.amount_paid??0)}</p></div><div><small>THANH TOÁN</small><mark>{statusLabel[b.payment_status]??b.payment_status}</mark><button onClick={()=>notify('Thanh toán cần chuyển tới checkout của nhà cung cấp đã cấu hình.')}>Xem nghĩa vụ →</button></div></div>)}</section>}
-
-      {tab==='premium'&&<Premium subscriptions={data.subscriptions??[]} onSelect={(planId)=>act({action:'select_plan',planId},planId==='plan_couple_free'?'Đã kích hoạt gói Free':'Đã tạo yêu cầu thanh toán — chưa kích hoạt Premium')}/>} 
-    </section>
-    {inquiry&&<div className="modal-backdrop" role="dialog" aria-modal="true"><form className="inquiry-modal" onSubmit={sendInquiry}><button type="button" className="modal-close" onClick={()=>setInquiry(null)}>×</button><p className="section-label">YÊU CẦU BÁO GIÁ</p><h2>{inquiry.business_name}</h2><div className="prefill"><span><small>Ngày cưới</small>{data.project.wedding_date?new Date(data.project.wedding_date).toLocaleDateString('vi-VN'):'Chưa chốt'}</span><span><small>Địa điểm</small>{data.project.location??'Chưa chốt'}</span><span><small>Số khách</small>{data.project.guest_count??'Chưa chốt'}</span></div><label>Brief gửi vendor</label><textarea value={brief} onChange={e=>setBrief(e.target.value)} rows={7} placeholder="Mô tả nhu cầu, phong cách và điều hai bạn muốn được tư vấn…"/><button type="button" className="ai-write" onClick={aiBrief}>✦ Để AI giúp mình viết yêu cầu</button><div className="modal-note"><b>Yêu cầu này chưa tạo booking.</b> Vendor sẽ xem brief và phản hồi báo giá riêng.</div><button className="button" disabled={busy||brief.length<30}>{busy?'Đang gửi…':'Gửi yêu cầu báo giá →'}</button></form></div>}
-    {vendorForm&&<VendorForm onClose={()=>setVendorForm(false)} onSubmit={async form=>{await act({action:'register_vendor',...form},'Hồ sơ đã gửi duyệt — chưa thể nhận booking');setVendorForm(false)}} busy={busy}/>} 
-  </main>;
+function ProjectCard({ workspace }: { workspace: Workspace }) {
+  const { project } = workspace;
+  const stats = progress(workspace);
+  return <div className="ws-project">
+    <small>ĐÁM CƯỚI CỦA HAI BẠN</small>
+    <strong>{project.location}</strong>
+    <span>{project.dateUndecided ? "Chưa chốt ngày" : formatWeddingMonth(project.date)} · {project.guests} khách</span>
+    <div className="ws-meter" role="progressbar" aria-valuenow={stats.percent} aria-valuemin={0} aria-valuemax={100} aria-label="Tiến độ checklist"><i style={{ width: `${stats.percent}%` }}/></div>
+    <span>{stats.percent}% checklist hoàn tất</span>
+  </div>;
 }
 
-function PlanProposal({proposal,onConfirm,onClose,busy}:{proposal:Row,onConfirm:()=>void,onClose:()=>void,busy:boolean}){return <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="proposal-modal"><button className="modal-close" onClick={onClose}>×</button><p className="section-label">AI ĐỀ XUẤT · CHỜ BẠN DUYỆT</p><h2>Bản kế hoạch đầu tiên</h2><div className="fact-grid"><span><small>Địa điểm</small><b>{proposal.parsed.location??'Chưa xác định'}</b></span><span><small>Số khách</small><b>{proposal.parsed.guestCount??'Chưa xác định'}</b></span><span><small>Ngân sách</small><b>{money(proposal.parsed.totalBudget)}</b></span><span><small>Ngày cưới</small><b>{proposal.parsed.weddingDate??'Chưa xác định'}</b></span></div><h3>the two AI đề xuất</h3><div className="proposal-lists"><div><strong>Phân bổ ngân sách</strong>{proposal.budget.map((x:[string,number])=><span key={x[0]}>{x[0]} <b>{x[1]}%</b></span>)}</div><div><strong>Checklist khởi động</strong>{proposal.tasks.map((x:string)=><span key={x}>✓ {x}</span>)}</div></div><div className="approval-note">✦ the two AI chưa lưu các mục này vào workspace. Chỉ khi bạn xác nhận, thay đổi mới được thực hiện.</div><div className="modal-actions"><button onClick={onClose}>Chỉnh lại ý tưởng</button><button className="button" onClick={onConfirm} disabled={busy}>{busy?'Đang lưu…':'Xác nhận & lưu kế hoạch →'}</button></div></div></div>}
-function Metric({label,value,sub,accent}:{label:string,value:string,sub:string,accent:string}){return <article className={`metric ${accent}`}><span>{label}</span><strong>{value}</strong><p>{sub}</p><i/></article>}
-function PanelTitle({kicker,title,action,onClick}:{kicker:string,title:string,action?:string,onClick?:()=>void}){return <div className="panel-title"><div><p>{kicker}</p><h2>{title}</h2></div>{action&&<button onClick={onClick}>{action}{onClick?' →':''}</button>}</div>}
-function Task({row,onToggle}:{row:Row,onToggle:()=>void}){return <div className={`task-row ${row.status==='completed'?'done':''}`}><button onClick={onToggle} aria-label={row.status==='completed'?'Mở lại':'Hoàn thành'}>{row.status==='completed'?'✓':''}</button><span><strong>{row.title}</strong><small>{row.category??'Kế hoạch'} · {row.priority==='high'?'Ưu tiên cao':'Ưu tiên vừa'}</small></span><i>›</i></div>}
-function Empty({icon,title,text,action}:{icon:string,title:string,text:string,action:()=>void}){return <div className="empty"><b>{icon}</b><h3>{title}</h3><p>{text}</p><button onClick={action}>Bắt đầu ngay →</button></div>}
-function GuidebookLibrary({packs,initialPack,applied,busy,onApply}:{packs:GuidebookPack[],initialPack:string,applied:Set<string>,busy:boolean,onApply:(pack:GuidebookPack)=>void}){const [selectedId,setSelectedId]=useState(initialPack&&packs.some(pack=>pack.id===initialPack)?initialPack:packs[0].id);useEffect(()=>{if(initialPack&&packs.some(pack=>pack.id===initialPack))setSelectedId(initialPack)},[initialPack,packs]);const selected=packs.find(pack=>pack.id===selectedId)??packs[0];const totalAdds=selected.tasks.length+(selected.timeline?.length??0)+(selected.budget?.length??0);return <div className="guidebook-library"><section className="guidebook-intro"><div><p className="section-label">THE TWO PLANNING SYSTEM</p><h2>Guidebook đã được đưa vào workspace.</h2><p>Chọn đúng module bạn cần. Dữ liệu chỉ được thêm vào checklist, timeline hoặc ngân sách sau khi bạn xác nhận.</p></div><div><b>7</b><span>template gốc</span><b>500+</b><span>ô planning</span></div></section><div className="guidebook-layout"><nav className="guidebook-pack-list" aria-label="Planning templates">{packs.map(pack=><button key={pack.id} className={selected.id===pack.id?"active":""} onClick={()=>setSelectedId(pack.id)}><i className={pack.color}/><span><small>{pack.eyebrow}</small><strong>{pack.title}</strong><em>{pack.sourceCount}</em></span>{applied.has(pack.id)&&<b>✓</b>}</button>)}</nav><section className="guidebook-detail panel"><div className="guidebook-detail-head"><div><p>{selected.eyebrow}</p><h2>{selected.title}</h2><span>{selected.description}</span></div><mark className={selected.color}>TỪ GUIDEBOOK</mark></div><div className="guidebook-source"><span>Nguồn nội dung</span><strong>{selected.sourceLabel}</strong><em>{selected.sourceCount}</em></div><div className="guidebook-preview"><small>XEM TRƯỚC NỘI DUNG SẼ THÊM</small>{selected.tasks.slice(0,6).map((task,index)=><div key={task.title}><b>{String(index+1).padStart(2,"0")}</b><span><strong>{task.title}</strong><em>{task.category}{task.daysBeforeWedding!=null?` · D-${task.daysBeforeWedding}`:""}</em></span></div>)}{selected.tasks.length>6&&<p>+ {selected.tasks.length-6} đầu việc khác{selected.timeline?.length?`, ${selected.timeline.length} giai đoạn timeline`:""}{selected.budget?.length?`, ${selected.budget.length} nhóm ngân sách`:""}</p>}</div><div className="guidebook-apply"><div><strong>{totalAdds} mục</strong><span>Không tạo trùng những mục đã có.</span></div><button className="button" disabled={busy||applied.has(selected.id)} onClick={()=>onApply(selected)}>{applied.has(selected.id)?"Đã thêm vào workspace":busy?"Đang thêm…":"Thêm vào kế hoạch →"}</button></div></section></div></div>}
-function Premium({subscriptions,onSelect}:{subscriptions:Row[],onSelect:(id:string)=>void}){const active=subscriptions.find(s=>s.subscription_status==='active');return <div><div className="premium-head"><p className="section-label">THE TWO PREMIUM</p><h2>Kế hoạch sâu hơn, vẫn theo nhịp của bạn.</h2><p>Giá và giới hạn được quản lý từ hệ thống. Gói trả phí chỉ kích hoạt sau thanh toán đã xác minh.</p></div><div className="pricing-grid"><article><span>CHO MỌI CẶP ĐÔI</span><h3>Couple Free</h3><strong>0₫ <small>/ mãi mãi</small></strong><ul><li>✓ Wedding Snapshot cơ bản</li><li>✓ Budget & Checklist</li><li>✓ Khám phá vendor</li><li>✓ Template marketplace</li></ul><button disabled={active?.plan_code==='couple_free'} onClick={()=>onSelect('plan_couple_free')}>{active?.plan_code==='couple_free'?'Gói hiện tại':'Chọn gói Free'}</button></article><article className="featured"><span>ĐƯỢC ĐỀ XUẤT</span><h3>Couple Premium</h3><strong>Giá cấu hình <small>/ theo kỳ</small></strong><ul><li>✓ Hạn mức AI cao hơn</li><li>✓ Tối ưu ngân sách nâng cao</li><li>✓ So sánh vendor cùng AI</li><li>✓ Workspace mở rộng</li></ul><button onClick={()=>onSelect('plan_couple_premium')}>Nâng cấp an toàn →</button><small>Không tự động tính phí. Bạn sẽ duyệt điều khoản trước checkout.</small></article></div><div className="safety-card"><span>◎</span><div><b>Premium không thể được mở khóa chỉ bằng giao diện.</b><p>Quyền truy cập được kiểm tra phía máy chủ; redirect thành công không phải bằng chứng thanh toán.</p></div></div></div>}
-function VendorForm({onClose,onSubmit,busy}:{onClose:()=>void,onSubmit:(f:Row)=>void,busy:boolean}){const [form,setForm]=useState({businessName:'',category:'Wedding Planner',location:'Hà Nội',website:'',description:''});return <div className="modal-backdrop"><form className="inquiry-modal" onSubmit={e=>{e.preventDefault();onSubmit(form)}}><button type="button" className="modal-close" onClick={onClose}>×</button><p className="section-label">VENDOR ONBOARDING</p><h2>Giới thiệu doanh nghiệp của bạn</h2><label>Tên doanh nghiệp</label><input required minLength={3} value={form.businessName} onChange={e=>setForm({...form,businessName:e.target.value})}/><label>Nhóm dịch vụ chính</label><select required value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option>Wedding Planner</option><option>Photo & Film</option><option>Venue</option><option>Trang trí</option><option>Trang phục</option><option>Makeup</option><option>Khác</option></select><label>Khu vực phục vụ</label><input required value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/><label>Website / portfolio</label><input type="url" value={form.website} onChange={e=>setForm({...form,website:e.target.value})} placeholder="https://"/><label>Mô tả ngắn</label><textarea required minLength={20} rows={5} value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/><div className="modal-note"><b>Hồ sơ sẽ ở trạng thái chờ duyệt.</b> Vendor không thể tự phê duyệt hoặc nhận booking trước khi được admin xác minh.</div><button className="button" disabled={busy}>Gửi hồ sơ xét duyệt →</button></form></div>}
+function Badge({ workspace }: { workspace: Workspace }) {
+  const { overdue } = progress(workspace);
+  return overdue > 0 ? <b className="ws-badge" title={`${overdue} việc quá hạn`}>{overdue}</b> : null;
+}
+
+function EmptyWorkspace({ pack }: { pack: string | null }) {
+  useEffect(() => { if (pack) rememberPendingPack(pack); }, [pack]);
+  return <div className="ws-state ws-empty">
+    <a className="ws-brand" href="/"><img src="/the-two-monogram.png" alt="" width="30" height="32"/><span>the two</span></a>
+    <h1>Workspace của hai bạn chưa được tạo.</h1>
+    <p>Trả lời 3 bước ngắn (giai đoạn, địa điểm, tháng cưới, số khách, ngân sách). the two sẽ tạo checklist có hạn chót, chia ngân sách và gợi ý vendor theo đúng thứ tự.</p>
+    <a className="primary-market-btn orange" href="/planning">Tạo Workspace trong 3 bước →</a>
+    {pack && <small>Template bạn chọn sẽ có sẵn trong tab Guidebook sau khi tạo Workspace.</small>}
+    <a className="text-action" href="/vendors">Hoặc tiếp tục xem vendor</a>
+  </div>;
+}

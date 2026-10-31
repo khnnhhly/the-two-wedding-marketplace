@@ -41,7 +41,7 @@ export const vendors: VendorProfile[] = [
     ],
     process: ["Gửi brief", "Tư vấn & làm rõ phạm vi", "Nhận đề xuất", "Xác nhận hợp tác"],
     facts: ["Hồ sơ đã xác minh", "Phục vụ Hà Nội và TP.HCM", "Chỉ nhận dự án sau buổi tư vấn"],
-    faqs: [{ question: "Bao lâu sẽ nhận phản hồi?", answer: "Vendor phản hồi inquiry trong Vendor Center; thời gian cụ thể phụ thuộc lịch làm việc và brief." }, { question: "Gửi inquiry có tạo booking không?", answer: "Không. Booking chỉ được tạo sau khi hai bạn chấp nhận báo giá còn hiệu lực." }],
+    faqs: [{ question: "Bao lâu sẽ nhận phản hồi?", answer: "Vendor phản hồi qua email hoặc điện thoại; thời gian cụ thể phụ thuộc lịch làm việc và brief." }, { question: "Gửi inquiry có tạo booking không?", answer: "Không. Booking chỉ được tạo sau khi hai bạn chấp nhận báo giá còn hiệu lực." }],
   },
   {
     slug: "lumiere-studio",

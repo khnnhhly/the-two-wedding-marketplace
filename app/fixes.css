@@ -53,12 +53,6 @@
 .lead-success p{margin:0;font-size:14px;line-height:1.65;color:#5f5953;max-width:620px}
 .lead-success .primary-market-btn{width:auto}
 
-.login-shell{padding:80px 0 110px;display:grid;place-items:center}
-.login-card{max-width:560px;background:#fff;border:1px solid var(--line);padding:42px;display:grid;gap:12px;justify-items:start}
-.login-card h1{margin:0;font-size:34px;letter-spacing:-.04em}
-.login-card>p{margin:0;font-size:14px;color:var(--muted);line-height:1.6}
-.login-card .primary-market-btn{width:100%}
-
 .compare-scroll{overflow-x:auto;border:1px solid var(--line);background:#fff}
 .compare-table{width:100%;border-collapse:collapse;min-width:640px;font-size:13px}
 .compare-table th,.compare-table td{border-bottom:1px solid var(--line);padding:14px 16px;text-align:left;vertical-align:top}
@@ -100,7 +94,7 @@
   .listing-filters{margin-top:-20px}
   .listing-filters label{flex:1 1 140px}
   .listing-filters select{min-width:0;width:100%}
-  .lead-success,.login-card{padding:24px}
+  .lead-success{padding:24px}
 }
 
 /* Header now holds shortlist + workspace. */
@@ -108,3 +102,17 @@
 .workspace-link span{white-space:nowrap}
 @media(max-width:1020px){.market-nav{grid-template-columns:180px 1fr auto}}
 @media(max-width:720px){.market-nav.compact-market-nav,.market-nav{grid-template-columns:1fr}}
+
+/* Discovery flow */
+.journey-line{list-style:none;padding:0;margin-bottom:0}
+.journey-line li{flex:1;border-top:1px solid #ffffff38;padding:16px 0 20px;color:#abb5dc;font-size:12px}
+.journey-line li.active{border-color:var(--orange);color:#fff}
+.priority-section{border:0;padding:0;margin:34px 0 0;min-width:0}
+.priority-section legend{padding:0;margin-bottom:14px}
+.discovery-form-grid input:disabled{background:#f0eeea;color:#a39d97}
+.discovery-form-grid label>span:first-child{font-size:12px}
+.discovery-form-grid input{font-size:14px}
+.workspace-cta{margin:0 0 40px}
+.workspace-cta>div:last-child{display:grid;gap:10px;justify-items:start}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:720px){.journey-line li{min-width:150px}}

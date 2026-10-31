@@ -1,64 +1,28 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npx next build --webpack",
   "framework": "nextjs",
   "regions": [
     "sin1"
   ],
   "redirects": [
     {
-      "source": "/admin/:path*",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/admin/:path*",
-      "permanent": false
-    },
-    {
-      "source": "/workspace",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/workspace",
-      "permanent": false
+      "source": "/vendor-onboarding",
+      "destination": "/vendor-apply",
+      "permanent": true
     },
     {
       "source": "/vendor-center",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/vendor-center",
+      "destination": "/for-vendors",
       "permanent": false
     },
     {
-      "source": "/vendor-onboarding",
-      "destination": "/vendor-apply",
+      "source": "/admin/:path*",
+      "destination": "/",
       "permanent": false
     },
     {
-      "source": "/signin-with-chatgpt",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/signin-with-chatgpt",
-      "permanent": false
-    },
-    {
-      "source": "/signout-with-chatgpt",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/signout-with-chatgpt",
-      "permanent": false
-    },
-    {
-      "source": "/callback",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/callback",
-      "permanent": false
-    },
-    {
-      "source": "/api/platform",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/api/platform",
-      "permanent": false
-    },
-    {
-      "source": "/api/vendor-center",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/api/vendor-center",
-      "permanent": false
-    },
-    {
-      "source": "/api/payment-webhook",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/api/payment-webhook",
-      "permanent": false
-    },
-    {
-      "source": "/api/admin/:path*",
-      "destination": "https://the-two-wedding-marketplace.trankhanhly2910.chatgpt.site/api/admin/:path*",
+      "source": "/login",
+      "destination": "/workspace",
       "permanent": false
     }
   ],

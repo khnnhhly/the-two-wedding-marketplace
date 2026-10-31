@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { hasWorkspace, trackVendor, updateWorkspace } from "../workspace/store";
 
 const KEY = "the-two-shortlist";
 const EVENT = "the-two-shortlist-change";
@@ -32,13 +33,23 @@ function subscribe(callback: () => void) {
 
 const empty: string[] = [];
 
+export function readShortlist() {
+  return snapshot();
+}
+
 export function useShortlist() {
   const items = useSyncExternalStore(subscribe, snapshot, () => empty);
   function toggle(slug: string) {
     const next = items.includes(slug) ? items.filter(item => item !== slug) : [...items, slug];
     try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage blocked */ }
     window.dispatchEvent(new Event(EVENT));
-    return next.includes(slug);
+    const added = next.includes(slug);
+    // Keep the Workspace vendor list in step with the shortlist.
+    if (hasWorkspace()) {
+      if (added) trackVendor(slug, {}, "Lưu vendor vào shortlist");
+      else updateWorkspace(current => ({ ...current, vendors: current.vendors.filter(vendor => vendor.slug !== slug || vendor.stage !== "saved") }));
+    }
+    return added;
   }
   function clear() {
     try { localStorage.removeItem(KEY); } catch { /* storage blocked */ }

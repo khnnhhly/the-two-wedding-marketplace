@@ -7,7 +7,7 @@ import { ConsentField, LeadSuccess } from "../components/LeadSuccess";
 import { PublicPage } from "../components/MarketplaceChrome";
 import { currentMonth, formatWeddingMonth, loadDiscoveryProfile, LIMITS } from "../data/discovery";
 import { findVendor, type VendorProfile, vendorPrice } from "../data/marketplace";
-import { loginPath } from "../lib/site";
+import { hasWorkspace, trackVendor } from "../workspace/store";
 
 type Form = { name: string; email: string; phone: string; location: string; date: string; guests: string; budget: string; message: string; company_website: string };
 const empty: Form = { name: "", email: "", phone: "", location: "", date: "", guests: "", budget: "", message: "", company_website: "" };
@@ -28,7 +28,7 @@ export default function InquiryPage() {
     setPkg(params.get("package") ?? "");
     setClickId(params.get("click_id") ?? "");
     const profile = loadDiscoveryProfile();
-    if (profile) setForm(current => ({ ...current, location: profile.location, date: /^\d{4}-\d{2}$/.test(profile.date) ? profile.date : "", guests: profile.guests, message: [profile.budget && `Tổng ngân sách đám cưới khoảng ${profile.budget} triệu.`, profile.style && `Phong cách mong muốn: ${profile.style}.`].filter(Boolean).join(" ") + (profile.budget || profile.style ? " " : "") }));
+    if (profile) setForm(current => ({ ...current, location: profile.location, date: /^\d{4}-\d{2}$/.test(profile.date) ? profile.date : "", guests: profile.guests, message: [profile.budget && `Tổng ngân sách đám cưới khoảng ${profile.budget} triệu.`, profile.style && `Phong cách mong muốn: ${profile.style}.`].filter(Boolean).join(" ") }));
   }, []);
 
   const set = (key: keyof Form, value: string) => setForm(current => ({ ...current, [key]: value }));
@@ -43,6 +43,7 @@ export default function InquiryPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Không gửi được brief. Vui lòng thử lại.");
       setResult(data);
+      if (vendor && hasWorkspace()) trackVendor(vendor.slug, { stage: "contacted", leadId: data.id }, `Gửi brief cho ${vendor.name}`);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không gửi được brief. Vui lòng thử lại.");
@@ -76,7 +77,7 @@ export default function InquiryPage() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary-market-btn orange" disabled={busy}>{busy ? "Đang gửi…" : "Gửi brief →"}</button>
       </form>}
-      <aside className="planning-aside"><p className="eyebrow">SAU KHI GỬI</p><h3>Điều gì xảy ra tiếp theo?</h3><ol><li><b>01</b><span>Bạn nhận mã tham chiếu cho brief.</span></li><li><b>02</b><span>Vendor kiểm tra lịch và phản hồi qua email/điện thoại.</span></li><li><b>03</b><span>So sánh báo giá cùng phạm vi trước khi đặt cọc.</span></li></ol><a href={loginPath("/workspace")}>Muốn lưu mọi brief vào một nơi? Mở Workspace →</a></aside>
+      <aside className="planning-aside"><p className="eyebrow">SAU KHI GỬI</p><h3>Điều gì xảy ra tiếp theo?</h3><ol><li><b>01</b><span>Bạn nhận mã tham chiếu cho brief.</span></li><li><b>02</b><span>Vendor kiểm tra lịch và phản hồi qua email/điện thoại.</span></li><li><b>03</b><span>So sánh báo giá cùng phạm vi trước khi đặt cọc.</span></li></ol><a href="/workspace?tab=vendors">Theo dõi mọi brief trong Workspace →</a></aside>
     </section>
   </PublicPage>;
 }
