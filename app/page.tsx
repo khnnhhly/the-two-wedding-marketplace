@@ -4,12 +4,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { AiConcierge } from "./components/AiConcierge";
-
-const categories = [
-  ["Địa điểm", "Venue", "⌂"], ["Trang trí", "Decor", "✦"], ["Photo & Film", "Studio", "◉"],
-  ["Wedding Planner", "Planner", "◎"], ["Trang phục", "Attire", "◇"], ["Makeup", "Beauty", "✧"],
-  ["Thiệp & Quà", "Stationery", "□"], ["Giải trí", "Entertainment", "♫"],
-];
+import { serviceCategories } from "./data/discovery";
 
 const vendors = [
   { slug: "the-planners", name: "The Planners", category: "Wedding Planner", location: "Hà Nội · TP.HCM", price: null, tag: "Tư vấn trước", color: "royal", description: "Lập kế hoạch và điều phối đám cưới trọn gói." },
@@ -45,7 +40,8 @@ export default function Home() {
   }), [query, category]);
 
   const notify = (text: string) => { setToast(text); setTimeout(() => setToast(""), 1900); };
-  function search(e: FormEvent) { e.preventDefault(); document.getElementById("marketplace")?.scrollIntoView({ behavior: "smooth" }); }
+  function search(e: FormEvent) { e.preventDefault(); window.location.href = `/vendors${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`; }
+  function quickSearch(value: string) { window.location.href = `/vendors?q=${encodeURIComponent(value)}`; }
   function save(name: string) { setSaved(s => s.includes(name) ? s.filter(x => x !== name) : [...s, name]); notify(saved.includes(name) ? "Đã bỏ lưu vendor" : "Đã lưu vào shortlist"); }
 
   return <main className="market-home" id="top">
@@ -53,7 +49,7 @@ export default function Home() {
     <div className="utility-bar"><div className="market-shell"><div><a href="/vendor-center">Kênh vendor</a><span/> <a href="/for-vendors">Trở thành vendor</a><span/> <a href="/help">Hỗ trợ</a></div><div><a href="/vendor-center">Vendor Center</a><a href="/workspace">Workspace</a></div></div></div>
     <header className="market-nav market-shell">
       <Brand />
-      <form className="market-search" onSubmit={search}><label htmlFor="market-search">Tìm dịch vụ cưới</label><input id="market-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Tìm venue, photographer, váy cưới…"/><button aria-label="Tìm kiếm">⌕</button><div><button type="button" onClick={() => setQuery("Venue Hà Nội")}>Venue Hà Nội</button><button type="button" onClick={() => setQuery("Photo & Film")}>Photo & Film</button><button type="button" onClick={() => setQuery("Trang trí")}>Trang trí</button></div></form>
+      <form className="market-search" onSubmit={search}><label htmlFor="market-search">Tìm dịch vụ cưới</label><input id="market-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Tìm venue, photographer, váy cưới…"/><button aria-label="Tìm kiếm">⌕</button><div><button type="button" onClick={() => quickSearch("Địa điểm Hà Nội")}>Địa điểm Hà Nội</button><button type="button" onClick={() => quickSearch("Photo & Film")}>Photo & Film</button><button type="button" onClick={() => quickSearch("Trang trí")}>Trang trí</button></div></form>
       <a className="workspace-link" href="/workspace"><i>□</i><span>Workspace<small>Kế hoạch của bạn</small></span></a>
     </header>
     <nav className="category-nav"><div className="market-shell"><a href="/vendors">Khám phá vendor</a><a href="/templates">Template & công cụ</a><a href="/planning">AI Wedding Planner</a><a href="/services/planning">Dịch vụ planning</a><a href="/guidebook">Cẩm nang</a><a href="/for-vendors" className="vendor-nav-link">Bán hàng trên the two →</a></div></nav>
@@ -65,7 +61,7 @@ export default function Home() {
           <h1>Mọi thứ cho đám cưới.<br/><em>Ở đúng một nơi.</em></h1>
           <p>Tìm vendor, so sánh báo giá, mua công cụ và quản lý toàn bộ hành trình cưới — rõ ràng cho cặp đôi, hiệu quả cho vendor.</p>
           <div className="mode-switch"><button className={mode === "buyer" ? "active" : ""} onClick={() => setMode("buyer")}>Tôi đang chuẩn bị cưới</button><button className={mode === "vendor" ? "active" : ""} onClick={() => setMode("vendor")}>Tôi là vendor</button></div>
-          {mode === "buyer" ? <div className="hero-action-row"><a className="primary-market-btn" href="/vendors">Khám phá marketplace</a><a className="secondary-market-btn" href="/planning">Lên kế hoạch với AI →</a></div> : <div className="hero-action-row"><a className="primary-market-btn orange" href="/vendor-onboarding">Mở gian hàng</a><a className="secondary-market-btn" href="/for-vendors">Xem cách hoạt động →</a></div>}
+          {mode === "buyer" ? <div className="hero-action-row"><a className="primary-market-btn" href="/planning">Bắt đầu với 5 câu hỏi →</a><a className="secondary-market-btn" href="/vendors">Đã biết mình cần gì? Tra cứu theo category</a></div> : <div className="hero-action-row"><a className="primary-market-btn orange" href="/vendor-onboarding">Mở gian hàng</a><a className="secondary-market-btn" href="/for-vendors">Xem cách hoạt động →</a></div>}
         </div>
         <div className="hero-market-card">
           <div className="hero-card-head"><span>MARKETPLACE SNAPSHOT</span><b>Live</b></div>
@@ -77,8 +73,8 @@ export default function Home() {
     </section>
 
     <section className="category-section market-shell">
-      <div className="market-section-head"><div><span>KHÁM PHÁ THEO NHU CẦU</span><h2>Hôm nay bạn đang tìm gì?</h2></div><button onClick={() => { setCategory("Tất cả"); document.getElementById("marketplace")?.scrollIntoView({behavior:"smooth"}); }}>Xem tất cả 18 danh mục →</button></div>
-      <div className="category-grid">{categories.map(([name,en,icon]) => <button key={name} onClick={() => { setCategory(name === "Địa điểm" ? "Venue" : name); document.getElementById("marketplace")?.scrollIntoView({behavior:"smooth"}); }}><i>{icon}</i><strong>{name}</strong><small>{en}</small><span>→</span></button>)}</div>
+      <div className="market-section-head"><div><span>KHÁM PHÁ THEO NHU CẦU</span><h2>Đã biết mình cần gì?</h2></div><a href="/vendors">Xem tất cả category →</a></div>
+      <div className="category-grid">{serviceCategories.map(categoryItem => <a key={categoryItem.name} href={`/vendors?category=${encodeURIComponent(categoryItem.name)}`}><i>{categoryItem.icon}</i><strong>{categoryItem.name}</strong><small>{categoryItem.short}</small><span>→</span></a>)}</div>
     </section>
 
     <section className="marketplace-section" id="marketplace"><div className="market-shell">

@@ -91,3 +91,32 @@ test("vendor center is ownership scoped and AI guide is available", async () => 
   assert.match(center, /Inquiry ≠ Booking/);
   assert.match(guide, /the two AI guide/);
 });
+
+test("couple discovery turns insight into a category-led lookup flow", async () => {
+  const [planning, vendors, discovery] = await Promise.all([
+    readFile(new URL("../app/planning/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/vendors/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/data/discovery.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(planning, /the-two-discovery-profile/);
+  assert.match(planning, /Chọn tối đa 3/);
+  assert.match(planning, /recommendedCategories/);
+  assert.match(vendors, /URLSearchParams/);
+  assert.match(vendors, /params\.set\("recommended", "1"\)/);
+  assert.match(vendors, /Flow gợi ý cho bạn/);
+  assert.match(discovery, /stageDefaults/);
+  assert.match(discovery, /Ưu tiên tra cứu/);
+});
+
+test("marketplace categories have searchable vendor coverage and one font system", async () => {
+  const [marketplace, api, globals, workspaceTheme] = await Promise.all([
+    readFile(new URL("../app/data/marketplace.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/platform/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/workspace/workspace-theme.css", import.meta.url), "utf8"),
+  ]);
+  for (const name of ["Địa điểm", "Wedding Planner", "Photo & Film", "Trang trí", "Trang phục", "Makeup", "Thiệp & Quà", "Giải trí"]) assert.match(marketplace, new RegExp(`category: "${name.replace(/[&]/g, "\\&")}"`));
+  for (const listing of ["lst_lotus", "lst_anmakeup", "lst_papier", "lst_band"]) assert.match(api, new RegExp(listing));
+  assert.match(globals, /--font-ui/);
+  assert.match(workspaceTheme, /font-family:var\(--font-ui\)!important/);
+});

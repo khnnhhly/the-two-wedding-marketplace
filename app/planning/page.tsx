@@ -1,23 +1,109 @@
 "use client";
 
-/* eslint-disable @next/next/no-html-link-for-pages */
-
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { PublicPage } from "../components/MarketplaceChrome";
+import {
+  buildPlanningIdea,
+  categoryMeta,
+  type DiscoveryProfile,
+  planningStages,
+  recommendedCategories,
+  serviceCategories,
+} from "../data/discovery";
 
-type Brief = { names: string; date: string; location: string; guests: string; budget: string; style: string; priorities: string };
+const initialProfile: DiscoveryProfile = {
+  stage: "starting",
+  location: "",
+  date: "",
+  guests: "",
+  budget: "",
+  style: "",
+  priorities: [],
+};
 
 export default function PlanningPage() {
-  const [brief, setBrief] = useState<Brief>({ names: "", date: "", location: "", guests: "", budget: "", style: "", priorities: "" });
-  const set = (key: keyof Brief, value: string) => setBrief(current => ({ ...current, [key]: value }));
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    const idea = [
-      brief.names && `Hai bạn: ${brief.names}.`, brief.location && `Dự kiến tổ chức tại ${brief.location}.`, brief.date && `Thời gian cưới: ${brief.date}.`,
-      brief.guests && `Khoảng ${brief.guests} khách.`, brief.budget && `Ngân sách dự kiến ${brief.budget} triệu đồng.`, brief.style && `Phong cách: ${brief.style}.`, brief.priorities && `Ưu tiên và ghi chú: ${brief.priorities}.`,
-    ].filter(Boolean).join(" ");
-    sessionStorage.setItem("the-two-planning-draft", idea);
-    window.location.href = "/workspace?from=planning";
+  const [step, setStep] = useState(1);
+  const [profile, setProfile] = useState<DiscoveryProfile>(initialProfile);
+  const [hint, setHint] = useState("");
+  const recommendations = useMemo(() => recommendedCategories(profile), [profile]);
+
+  const set = <K extends keyof DiscoveryProfile>(key: K, value: DiscoveryProfile[K]) => {
+    setProfile(current => ({ ...current, [key]: value }));
+  };
+
+  function togglePriority(name: string) {
+    if (profile.priorities.includes(name)) {
+      set("priorities", profile.priorities.filter(item => item !== name));
+      setHint("");
+      return;
+    }
+    if (profile.priorities.length >= 3) {
+      setHint("Chọn tối đa 3 ưu tiên để recommendation không bị dàn trải.");
+      return;
+    }
+    set("priorities", [...profile.priorities, name]);
+    setHint("");
   }
-  return <PublicPage className="planning-page"><section className="planning-hero"><div className="market-shell"><p className="eyebrow">COUPLE FLOW · BƯỚC 1/4</p><h1>Cho the two biết những gì<br/><em>hai bạn đã biết.</em></h1><p>Không cần có đủ câu trả lời. Thông tin chưa chắc chắn có thể để trống và bổ sung sau.</p><div className="journey-line"><span className="active"><b>01</b>Chia sẻ brief</span><span><b>02</b>Duyệt AI proposal</span><span><b>03</b>Lập kế hoạch</span><span><b>04</b>Tìm & booking vendor</span></div></div></section><section className="market-shell planning-form-layout"><form className="planning-form" onSubmit={submit}><div className="form-heading"><p className="eyebrow">THÔNG TIN BAN ĐẦU</p><h2>Tạo Wedding Brief</h2><p>the two chỉ dùng dữ liệu này để chuẩn bị bản đề xuất. Bạn sẽ duyệt trước khi lưu.</p></div><div className="form-grid"><label><span>Tên hai bạn <small>không bắt buộc</small></span><input value={brief.names} onChange={event => set("names", event.target.value)} placeholder="Linh & Minh"/></label><label><span>Thời gian cưới</span><input value={brief.date} onChange={event => set("date", event.target.value)} placeholder="Tháng 12/2027 hoặc chưa chốt"/></label><label><span>Địa điểm dự kiến</span><input required value={brief.location} onChange={event => set("location", event.target.value)} placeholder="Hà Nội"/></label><label><span>Số khách dự kiến</span><input required type="number" min="10" value={brief.guests} onChange={event => set("guests", event.target.value)} placeholder="250"/></label><label><span>Ngân sách dự kiến <small>triệu đồng</small></span><input required type="number" min="10" value={brief.budget} onChange={event => set("budget", event.target.value)} placeholder="400"/></label><label><span>Phong cách</span><input value={brief.style} onChange={event => set("style", event.target.value)} placeholder="Tối giản, ấm áp, nhiều hoa"/></label><label className="wide"><span>Điều hai bạn ưu tiên hoặc đang băn khoăn</span><textarea value={brief.priorities} onChange={event => set("priorities", event.target.value)} rows={5} placeholder="Ví dụ: ưu tiên trải nghiệm khách mời, chưa biết chia ngân sách thế nào…"/></label></div><div className="consent-note"><b>✦ AI luôn chờ bạn xác nhận.</b><p>Bản đề xuất không tự tạo booking, không tự liên hệ vendor và không tự ghi dữ liệu vào Workspace.</p></div><button className="primary-market-btn orange">Tiếp tục với the two AI →</button></form><aside className="planning-aside"><p className="eyebrow">SAU BƯỚC NÀY</p><h3>Bạn vẫn là người quyết định.</h3><ol><li><b>01</b><span>AI đọc brief và tách những dữ kiện đã có.</span></li><li><b>02</b><span>Bạn xem ngân sách, timeline và checklist đề xuất.</span></li><li><b>03</b><span>Chỉ phần được xác nhận mới lưu vào Workspace.</span></li></ol><a href="/templates">Chưa sẵn sàng? Xem template trước →</a></aside></section></PublicPage>;
+
+  function saveDiscovery() {
+    sessionStorage.setItem("the-two-discovery-profile", JSON.stringify(profile));
+    sessionStorage.setItem("the-two-planning-draft", buildPlanningIdea(profile));
+  }
+
+  function continueToRecommendations(event: FormEvent) {
+    event.preventDefault();
+    saveDiscovery();
+    setStep(3);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openCategory(category: string) {
+    saveDiscovery();
+    window.location.assign(`/vendors?category=${encodeURIComponent(category)}&recommended=1`);
+  }
+
+  function openWorkspace() {
+    saveDiscovery();
+    window.location.assign("/workspace?from=planning");
+  }
+
+  return <PublicPage className="planning-page discovery-page">
+    <section className="planning-hero discovery-hero"><div className="market-shell">
+      <p className="eyebrow">COUPLE DISCOVERY · BƯỚC {step}/3</p>
+      <h1>{step === 1 ? <>Bắt đầu từ đúng<br/><em>giai đoạn của hai bạn.</em></> : step === 2 ? <>Một vài câu hỏi để<br/><em>gợi ý đúng category.</em></> : <>Flow tra cứu dành riêng<br/><em>cho hai bạn.</em></>}</h1>
+      <p>{step === 1 ? "Chỉ cần chọn tình trạng hiện tại. the two sẽ không bắt bạn đi qua những bước chưa cần thiết." : step === 2 ? "Chia sẻ những gì đã biết và chọn tối đa 3 ưu tiên. Thông tin chưa chắc chắn có thể để trống." : "Tra cứu lần lượt theo category; mỗi kết quả vẫn giữ bối cảnh về địa điểm và ưu tiên của hai bạn."}</p>
+      <div className="journey-line discovery-progress">
+        <span className={step >= 1 ? "active" : ""}><b>01</b>Giai đoạn hiện tại</span>
+        <span className={step >= 2 ? "active" : ""}><b>02</b>Insight & ưu tiên</span>
+        <span className={step >= 3 ? "active" : ""}><b>03</b>Flow tra cứu</span>
+      </div>
+    </div></section>
+
+    <section className="market-shell discovery-shell">
+      {step === 1 && <div className="discovery-step">
+        <div className="step-heading"><p className="eyebrow">01 · BẠN ĐANG Ở ĐÂU?</p><h2>Chọn một trạng thái gần nhất.</h2><p>Không có câu trả lời đúng tuyệt đối; bạn có thể quay lại thay đổi.</p></div>
+        <div className="stage-options">{planningStages.map(item => <button key={item.id} className={profile.stage === item.id ? "selected" : ""} onClick={() => set("stage", item.id)}><i>{profile.stage === item.id ? "✓" : ""}</i><span><b>{item.label}</b><small>{item.description}</small></span></button>)}</div>
+        <div className="discovery-actions"><span/><button className="primary-market-btn" onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Tiếp tục →</button></div>
+      </div>}
+
+      {step === 2 && <form className="discovery-step" onSubmit={continueToRecommendations}>
+        <div className="step-heading"><p className="eyebrow">02 · KHAI THÁC INSIGHT</p><h2>Thông tin nào đã tương đối rõ?</h2><p>Chỉ địa điểm là bắt buộc để recommendation có đủ bối cảnh.</p></div>
+        <div className="discovery-form-grid">
+          <label><span>Địa điểm dự kiến</span><input required value={profile.location} onChange={event => set("location", event.target.value)} placeholder="Hà Nội, TP.HCM hoặc chưa chốt"/></label>
+          <label><span>Thời gian cưới</span><input value={profile.date} onChange={event => set("date", event.target.value)} placeholder="Tháng 12/2027 hoặc chưa chốt"/></label>
+          <label><span>Số khách dự kiến</span><input type="number" min="10" value={profile.guests} onChange={event => set("guests", event.target.value)} placeholder="250"/></label>
+          <label><span>Ngân sách <small>triệu đồng</small></span><input type="number" min="10" value={profile.budget} onChange={event => set("budget", event.target.value)} placeholder="400"/></label>
+          <label className="wide"><span>Phong cách hoặc cảm giác mong muốn</span><input value={profile.style} onChange={event => set("style", event.target.value)} placeholder="Tối giản, ấm áp, hiện đại…"/></label>
+        </div>
+        <div className="priority-section"><div><p className="eyebrow">ƯU TIÊN TRA CỨU</p><h3>Hai bạn muốn xử lý category nào trước?</h3><small>Chọn tối đa 3. Nếu chưa biết, the two sẽ gợi ý theo giai đoạn.</small></div><div className="priority-grid">{serviceCategories.map(category => <button type="button" key={category.name} className={profile.priorities.includes(category.name) ? "selected" : ""} onClick={() => togglePriority(category.name)}><i>{category.icon}</i><span><b>{category.name}</b><small>{category.short}</small></span><em>{profile.priorities.includes(category.name) ? "✓" : "+"}</em></button>)}</div>{hint && <p className="selection-hint">{hint}</p>}</div>
+        <div className="discovery-actions"><button type="button" className="text-action" onClick={() => setStep(1)}>← Quay lại</button><button className="primary-market-btn">Xem recommendation →</button></div>
+      </form>}
+
+      {step === 3 && <div className="discovery-step recommendation-step">
+        <div className="recommendation-summary"><div><p className="eyebrow">PROFILE TẠM THỜI</p><h2>{profile.location || "Chưa chốt địa điểm"}{profile.date ? ` · ${profile.date}` : ""}</h2><p>{profile.guests ? `${profile.guests} khách` : "Chưa chốt số khách"}{profile.budget ? ` · ${profile.budget} triệu` : " · Chưa chốt ngân sách"}</p></div><button onClick={() => setStep(2)}>Chỉnh câu trả lời</button></div>
+        <div className="recommendation-layout"><div><p className="eyebrow">FLOW TRA CỨU ĐỀ XUẤT</p><h2>Đi theo từng category,<br/>không mở tất cả cùng lúc.</h2><p>Mỗi category là một bước độc lập. Bạn có thể xem vendor, quay lại flow này rồi tiếp tục bước kế tiếp.</p></div><ol className="recommendation-list">{recommendations.map((name, index) => { const category = categoryMeta(name); return <li key={name}><b>{String(index + 1).padStart(2, "0")}</b><i>{category.icon}</i><span><strong>{category.name}</strong><small>{category.reason}</small></span><button onClick={() => openCategory(category.name)}>Tra cứu →</button></li>; })}</ol></div>
+        <div className="next-step-card"><div><p className="eyebrow">BƯỚC TIẾP THEO</p><h3>Bắt đầu từ {recommendations[0]}.</h3><p>Kết quả sẽ ưu tiên category này và vẫn giữ insight bạn vừa chia sẻ.</p></div><div><button className="primary-market-btn orange" onClick={() => openCategory(recommendations[0])}>Tra cứu {recommendations[0]} →</button><button className="outline-market-btn" onClick={openWorkspace}>Tạo Workspace từ insight này</button></div></div>
+      </div>}
+    </section>
+  </PublicPage>;
 }

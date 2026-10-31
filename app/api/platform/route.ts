@@ -31,12 +31,20 @@ async function seedCatalog() {
     ["ven_lumiere", "Lumière Studio", "lumiere-studio", "Photo & Film theo phong cách tự nhiên, giàu cảm xúc.", "Hà Nội"],
     ["ven_moc", "Mộc Concept", "moc-concept", "Thiết kế concept và trang trí tiệc cưới tinh giản, giàu chất liệu.", "TP. Hồ Chí Minh"],
     ["ven_maison", "Maison de Blanc", "maison-de-blanc", "Bridal studio với phom dáng hiện đại và trải nghiệm thử váy có tư vấn.", "Toàn quốc"],
+    ["ven_lotus", "Lotus Garden Venue", "lotus-garden-venue", "Không gian tiệc trong nhà và ngoài trời cho 150–500 khách.", "Hà Nội"],
+    ["ven_anmakeup", "An Makeup Studio", "an-makeup-studio", "Bridal makeup tự nhiên, có lịch thử và timeline rõ ràng.", "Hà Nội · Toàn quốc"],
+    ["ven_papier", "Papier Story", "papier-story", "Thiệp cưới và quà cảm ơn đồng bộ theo concept.", "Toàn quốc"],
+    ["ven_band", "The Band Society", "the-band-society", "Live band và âm nhạc sự kiện theo format tiệc cưới.", "TP. Hồ Chí Minh · Toàn quốc"],
   ];
   const listings = [
     ["lst_theplanners", "ven_theplanners", "Lập kế hoạch cưới trọn gói", "full-wedding-planning", "consultation", "custom_quote", null],
     ["lst_lumiere", "ven_lumiere", "Phóng sự cưới tự nhiên", "wedding-photo-film", "request_quote", "starting_from", 18000000],
     ["lst_moc", "ven_moc", "Concept & Decoration", "concept-decoration", "request_quote", "starting_from", 35000000],
     ["lst_maison", "ven_maison", "Bridal fitting & dress", "bridal-fitting", "consultation", "starting_from", 12000000],
+    ["lst_lotus", "ven_lotus", "Wedding venue & reception", "wedding-venue", "request_quote", "starting_from", 850000],
+    ["lst_anmakeup", "ven_anmakeup", "Bridal makeup", "bridal-makeup", "consultation", "starting_from", 6500000],
+    ["lst_papier", "ven_papier", "Invitation & stationery", "invitation-stationery", "request_quote", "starting_from", 35000],
+    ["lst_band", "ven_band", "Wedding live band", "wedding-live-band", "request_quote", "starting_from", 22000000],
   ];
   const plans = [
     ["plan_couple_free", "couple_free", "Couple Free", "couple", "monthly", 0],
