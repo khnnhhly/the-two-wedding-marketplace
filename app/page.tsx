@@ -13,7 +13,7 @@ export default function Home() {
     <section className="market-hero">
       <div className="market-shell hero-market-grid">
         <div className="hero-copy-new">
-          <span className="market-kicker">WEDDING MARKETPLACE FOR VIETNAM</span>
+          <span className="script-tagline">Wedding marketplace, made clear</span>
           <h1>Mọi thứ cho đám cưới.<br/><em>Ở đúng một nơi.</em></h1>
           <p>Tìm vendor, so sánh báo giá, dùng công cụ planning và quản lý toàn bộ hành trình cưới — rõ ràng cho cặp đôi, hiệu quả cho vendor.</p>
           <HeroModeSwitch/>

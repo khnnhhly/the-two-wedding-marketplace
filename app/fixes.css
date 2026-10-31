@@ -1,6 +1,6 @@
 /* Components added in the marketplace QA pass: shortlist, public forms, filters, policies. */
 
-.market-search>div a{font-size:10px;color:#7a7470}
+.market-search>div a{font-size:10px;color:#757575}
 .market-search>div a:hover{color:var(--cobalt)}
 .header-actions{display:flex;align-items:center;gap:20px;justify-self:end}
 .shortlist-link{font-size:12px;font-weight:600;color:var(--royal);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
@@ -11,7 +11,7 @@
 .market-vendor-body h3 a:hover{color:var(--cobalt)}
 
 .market-vendor-card{position:relative}
-.shortlist-icon{position:absolute;right:11px;top:10px;border:0;border-radius:50%;width:34px;height:34px;background:#fff;color:var(--orange);font-size:18px;z-index:3;cursor:pointer;box-shadow:0 2px 8px #12277a22}
+.shortlist-icon{position:absolute;right:11px;top:10px;border:0;border-radius:50%;width:34px;height:34px;background:#fff;color:var(--orange);font-size:18px;z-index:3;cursor:pointer;box-shadow:0 2px 8px #8e041322}
 .shortlist-icon[aria-pressed="true"]{background:var(--orange);color:#fff}
 .compare-table .shortlist-icon{position:static;width:26px;height:26px;font-size:14px;margin-left:8px;vertical-align:middle;box-shadow:none;border:1px solid var(--line)}
 .shortlist-full{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border:1px solid #ffffff80;background:transparent;color:inherit;font-size:12px;font-weight:700;cursor:pointer}
@@ -24,12 +24,12 @@
 .listing-filters label span{display:block;font-size:10px;font-weight:800;letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase}
 .listing-filters select{height:42px;min-width:190px;border:1px solid var(--line);background:#fff;padding:0 12px;font-size:13px}
 .listing-controls button[aria-pressed]{cursor:pointer}
-.notice-bar{background:#fff4ec;border-left:3px solid var(--orange);padding:14px 18px;margin-bottom:24px;font-size:13px;line-height:1.6}
+.notice-bar{background:#faeff0;border-left:3px solid var(--orange);padding:14px 18px;margin-bottom:24px;font-size:13px;line-height:1.6}
 .notice-bar a{color:var(--cobalt);font-weight:700}
 .empty-actions{display:flex;gap:16px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:8px}
 .empty-actions a{font-size:12px;font-weight:700;color:var(--cobalt)}
 
-.portfolio-empty{border:1px dashed var(--line);background:#fcfbf9;padding:26px;display:grid;gap:8px;justify-items:start}
+.portfolio-empty{border:1px dashed var(--line);background:#fbfbfb;padding:26px;display:grid;gap:8px;justify-items:start}
 .portfolio-empty b{font-size:22px;color:var(--cobalt)}
 .portfolio-empty p{margin:0;font-size:13px;color:var(--muted);line-height:1.6;max-width:620px}
 .portfolio-empty a{font-size:12px;font-weight:700;color:var(--cobalt)}
@@ -42,7 +42,7 @@
 .form-grid label>span{display:block;font-size:11px;font-weight:700;margin-bottom:7px}
 .form-grid input,.form-grid textarea,.form-grid select{font-size:14px}
 .form-grid label.wide{grid-column:1/-1}
-.package-pill{display:inline-block;margin-top:10px;background:#eef2ff;padding:7px 11px;font-size:12px}
+.package-pill{display:inline-block;margin-top:10px;background:#faeff0;padding:7px 11px;font-size:12px}
 .consent-check{display:flex;gap:10px;align-items:flex-start;font-size:12px;line-height:1.55;margin:0 0 16px}
 .consent-check input{margin-top:3px;width:16px;height:16px;flex:none}
 .consent-check a,.consent-note a{color:var(--cobalt);font-weight:700}
@@ -50,7 +50,7 @@
 .lead-success{background:#fff;border:1px solid var(--line);padding:40px;display:grid;gap:12px;justify-items:start}
 .lead-success>b{width:46px;height:46px;border-radius:50%;background:#e7f6ec;color:#16794a;display:grid;place-items:center;font-size:22px}
 .lead-success h2{margin:0;font-size:28px;letter-spacing:-.03em}
-.lead-success p{margin:0;font-size:14px;line-height:1.65;color:#5f5953;max-width:620px}
+.lead-success p{margin:0;font-size:14px;line-height:1.65;color:#595959;max-width:620px}
 .lead-success .primary-market-btn{width:auto}
 
 .compare-scroll{overflow-x:auto;border:1px solid var(--line);background:#fff}
@@ -75,9 +75,9 @@
 .help-extra{display:grid;grid-template-columns:1.3fr .7fr;gap:40px;padding-top:60px}
 .help-extra .faq-list p{font-size:13px}
 .contact-card{background:var(--royal);color:#fff;padding:28px;height:max-content}
-.contact-card .eyebrow{color:#ffb28d!important}
+.contact-card .eyebrow{color:#eba1a8!important}
 .contact-card h2{margin:0 0 8px}
-.contact-card p{font-size:13px;line-height:1.6;color:#dbe0fa}
+.contact-card p{font-size:13px;line-height:1.6;color:#f6dfe1}
 .contact-card .primary-market-btn{width:100%;word-break:break-all}
 
 .ai-thread{max-height:46vh;overflow-y:auto}
@@ -105,14 +105,50 @@
 
 /* Discovery flow */
 .journey-line{list-style:none;padding:0;margin-bottom:0}
-.journey-line li{flex:1;border-top:1px solid #ffffff38;padding:16px 0 20px;color:#abb5dc;font-size:12px}
+.journey-line li{flex:1;border-top:1px solid #ffffff38;padding:16px 0 20px;color:#ea9da5;font-size:12px}
 .journey-line li.active{border-color:var(--orange);color:#fff}
 .priority-section{border:0;padding:0;margin:34px 0 0;min-width:0}
 .priority-section legend{padding:0;margin-bottom:14px}
-.discovery-form-grid input:disabled{background:#f0eeea;color:#a39d97}
+.discovery-form-grid input:disabled{background:#f7e3e5;color:#9d9d9d}
 .discovery-form-grid label>span:first-child{font-size:12px}
 .discovery-form-grid input{font-size:14px}
 .workspace-cta{margin:0 0 40px}
 .workspace-cta>div:last-child{display:grid;gap:10px;justify-items:start}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:720px){.journey-line li{min-width:150px}}
+
+/* ---------- Brand typography & red/white palette ---------- */
+body{font-family:var(--font-body),"Helvetica Neue",Arial,sans-serif;color:var(--obsidian);background:#fff}
+h1,h2,h3,.ws-head h1,.lead-success h2,.login-card h1{font-family:var(--font-heading),Georgia,serif;letter-spacing:-.01em!important}
+h1,h2,h3{font-weight:400!important}
+h1 em,h2 em{font-family:var(--font-heading-italic),var(--font-heading),Georgia,serif;font-style:italic!important}
+.wordmark,.ws-brand span{font-family:var(--font-title),cursive;font-weight:400;letter-spacing:0;line-height:1;text-transform:none}
+.wordmark{font-size:34px;color:var(--royal)}
+.wordmark small{font-family:var(--font-body),sans-serif;font-size:8px;margin-top:2px}
+.ws-brand span{font-size:30px}
+.script-tagline{font-family:var(--font-title),cursive;font-size:30px;line-height:1.1;color:var(--royal);text-transform:none;letter-spacing:0;font-weight:400}
+.market-brand .mark{border-color:#f1d0d3}
+.eyebrow{color:var(--royal)!important}
+
+/* Red surfaces: CTAs and accents flip to white so nothing disappears into the background. */
+.planning-hero,.vendor-landing-hero,.subpage-hero.orange,.detail-aside,.contact-card,.ws-side,.hero-market-card,.market-footer{background:var(--royal);color:#fff}
+.planning-hero .primary-market-btn,.vendor-landing-hero .primary-market-btn,.subpage-hero.orange .primary-market-btn,.detail-aside .primary-market-btn,.contact-card .primary-market-btn,.planner-strip .primary-market-btn.orange{background:#fff!important;color:var(--royal)!important}
+.planning-hero h1 em,.vendor-landing-hero h1 em,.subpage-hero.orange h1 em{color:#fff}
+.planning-hero .eyebrow,.vendor-landing-hero .eyebrow,.subpage-hero.orange .eyebrow,.detail-aside .eyebrow,.contact-card .eyebrow,.ws-project small,.market-footer strong{color:#f5c6cb!important}
+.vendor-landing-hero .secondary-market-btn,.subpage-hero.orange .secondary-market-btn{color:#fff;border-color:#ffffff90}
+.journey-line li.active{border-color:#fff}
+.journey-line b{color:#f5c6cb}
+.ws-badge{background:#fff;color:var(--royal)}
+.ws-side nav button i{color:#f5c6cb}
+.ws-side nav button.active i{color:var(--royal)}
+.ws-meter i{background:var(--royal)}
+.ws-side .ws-meter i{background:#fff}
+.compare-link{color:#fff}
+.market-footer a,.market-footer p,.market-footer span{color:#f7dfe1}
+.market-footer .wordmark{color:#fff}
+.footer-bottom-new{border-top-color:#ffffff33}
+.primary-market-btn,.outline-market-btn,.secondary-market-btn{transition:background .15s,color .15s,border-color .15s}
+.primary-market-btn:hover{background:var(--majorelle)}
+:focus-visible{outline:2px solid var(--royal);outline-offset:2px}
+.hero-card-head b{background:#fff!important;color:var(--royal)!important}
+.wordmark{font-size:40px}

@@ -37,3 +37,6 @@ yarn-error.log*
 # typescript
 next-env.d.ts
 *.tsbuildinfo
+
+# iCloud/Finder conflict copies
+* [0-9].*
