@@ -35,9 +35,64 @@ const stageDefaults: Record<PlanningStage, string[]> = {
   finalizing: ["Makeup", "Thiệp & Quà", "Giải trí"],
 };
 
+// Booking order that respects dependencies: the venue fixes date and capacity,
+// which every other vendor needs before quoting.
+const dependencyOrder = serviceCategories.map(category => category.name as string);
+
 export function recommendedCategories(profile: DiscoveryProfile) {
-  const ordered = [...profile.priorities, ...stageDefaults[profile.stage]];
-  return [...new Set(ordered)].slice(0, 4);
+  const picked = [...new Set([...profile.priorities, ...stageDefaults[profile.stage]])].slice(0, 4);
+  return picked.sort((a, b) => dependencyOrder.indexOf(a) - dependencyOrder.indexOf(b));
+}
+
+export const DISCOVERY_KEY = "the-two-discovery-profile";
+export const DRAFT_KEY = "the-two-planning-draft";
+
+/** Profile survives tab closes; falls back silently when storage is blocked. */
+export function loadDiscoveryProfile(): DiscoveryProfile | null {
+  try {
+    const raw = localStorage.getItem(DISCOVERY_KEY) ?? sessionStorage.getItem(DISCOVERY_KEY);
+    return raw ? JSON.parse(raw) as DiscoveryProfile : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveDiscoveryProfile(profile: DiscoveryProfile) {
+  try {
+    localStorage.setItem(DISCOVERY_KEY, JSON.stringify(profile));
+    localStorage.setItem(DRAFT_KEY, buildPlanningIdea(profile));
+    sessionStorage.setItem(DRAFT_KEY, buildPlanningIdea(profile));
+  } catch { /* storage unavailable: the flow still works for this page view */ }
+}
+
+export const formatNumber = (value: string | number) => new Intl.NumberFormat("vi-VN").format(Number(value));
+
+/** "2027-12" → "Tháng 12/2027". */
+export function formatWeddingMonth(value: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  return match ? `Tháng ${Number(match[2])}/${match[1]}` : value;
+}
+
+export function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export const LIMITS = { guests: { min: 10, max: 3000 }, budget: { min: 10, max: 50000 } } as const;
+
+export function validateProfile(profile: DiscoveryProfile) {
+  const errors: Partial<Record<keyof DiscoveryProfile, string>> = {};
+  if (!profile.location.trim()) errors.location = "Nhập thành phố dự kiến, hoặc ghi “chưa chốt”.";
+  if (profile.date && profile.date < currentMonth()) errors.date = "Thời gian cưới không thể ở quá khứ.";
+  if (profile.guests) {
+    const guests = Number(profile.guests);
+    if (!Number.isInteger(guests) || guests < LIMITS.guests.min || guests > LIMITS.guests.max) errors.guests = `Số khách từ ${LIMITS.guests.min} đến ${formatNumber(LIMITS.guests.max)}.`;
+  }
+  if (profile.budget) {
+    const budget = Number(profile.budget);
+    if (!Number.isFinite(budget) || budget < LIMITS.budget.min || budget > LIMITS.budget.max) errors.budget = `Ngân sách từ ${LIMITS.budget.min} đến ${formatNumber(LIMITS.budget.max)} triệu đồng.`;
+  }
+  return errors;
 }
 
 export function categoryMeta(name: string) {
@@ -49,9 +104,9 @@ export function buildPlanningIdea(profile: DiscoveryProfile) {
   return [
     `Giai đoạn hiện tại: ${stage}.`,
     profile.location && `Dự kiến tổ chức tại ${profile.location}.`,
-    profile.date && `Thời gian cưới: ${profile.date}.`,
-    profile.guests && `Khoảng ${profile.guests} khách.`,
-    profile.budget && `Ngân sách dự kiến ${profile.budget} triệu đồng.`,
+    profile.date && `Thời gian cưới: ${formatWeddingMonth(profile.date)}.`,
+    profile.guests && `Khoảng ${formatNumber(profile.guests)} khách.`,
+    profile.budget && `Ngân sách dự kiến ${formatNumber(profile.budget)} triệu đồng.`,
     profile.style && `Phong cách mong muốn: ${profile.style}.`,
     `Ưu tiên tra cứu: ${recommendedCategories(profile).join(", ")}.`,
   ].filter(Boolean).join(" ");

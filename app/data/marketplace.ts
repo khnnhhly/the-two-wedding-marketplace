@@ -7,6 +7,8 @@ export type VendorProfile = {
   category: string;
   location: string;
   price: number | null;
+  /** Unit for the starting price, e.g. "khách" → "Từ 850.000₫/khách". */
+  priceUnit?: string;
   tag: string;
   color: "royal" | "cobalt" | "apricot" | "ivory";
   description: string;
@@ -16,6 +18,8 @@ export type VendorProfile = {
   process: string[];
   facts: string[];
   faqs: { question: string; answer: string }[];
+  /** Outbound channels. Only verified links are listed; every click goes through /go for attribution. */
+  contacts?: { website?: string; instagram?: string; phone?: string };
 };
 
 export const vendors: VendorProfile[] = [
@@ -97,6 +101,7 @@ export const vendors: VendorProfile[] = [
     category: "Địa điểm",
     location: "Hà Nội",
     price: 850000,
+    priceUnit: "khách",
     tag: "Yêu cầu báo giá",
     color: "royal",
     description: "Không gian tiệc trong nhà và ngoài trời cho 150–500 khách.",
@@ -131,6 +136,7 @@ export const vendors: VendorProfile[] = [
     category: "Thiệp & Quà",
     location: "Toàn quốc",
     price: 35000,
+    priceUnit: "bộ",
     tag: "Đặt theo số lượng",
     color: "ivory",
     description: "Thiệp cưới và quà cảm ơn đồng bộ theo concept.",
@@ -181,4 +187,8 @@ export const templates: TemplateProduct[] = [
   { slug: "complete-wedding-checklist", packId: "general-checklist", name: "Complete Wedding Checklist", meta: "Checklist · ưu tiên", price: "Có trong Workspace", tone: "p-orange", description: "Checklist nền tảng để bắt đầu khi hai bạn chưa biết nên làm gì trước.", outcomes: ["Có điểm bắt đầu rõ ràng", "Phân loại theo ưu tiên", "Tùy chỉnh theo đám cưới của bạn"], sections: ["Planning basics", "Vendor checklist", "Personal details"] },
 ];
 
-export const money = (value: number | null) => value == null ? "Liên hệ báo giá" : `Từ ${new Intl.NumberFormat("vi-VN").format(value)}₫`;
+export const money = (value: number | null, unit?: string) => value == null ? "Liên hệ báo giá" : `Từ ${new Intl.NumberFormat("vi-VN").format(value)}₫${unit ? `/${unit}` : ""}`;
+
+export const vendorPrice = (vendor: Pick<VendorProfile, "price" | "priceUnit">) => money(vendor.price, vendor.priceUnit);
+
+export const findVendor = (slug: string) => vendors.find(vendor => vendor.slug === slug);

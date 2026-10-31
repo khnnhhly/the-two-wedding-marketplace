@@ -4,60 +4,112 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PublicPage } from "../components/MarketplaceChrome";
-import { categoryMeta, type DiscoveryProfile, recommendedCategories, serviceCategories } from "../data/discovery";
-import { money, vendors } from "../data/marketplace";
+import { VendorCard } from "../components/VendorCard";
+import { categoryMeta, type DiscoveryProfile, formatWeddingMonth, loadDiscoveryProfile, recommendedCategories, serviceCategories } from "../data/discovery";
+import { vendors } from "../data/marketplace";
+import { basedIn, locationOptions, matchesQuery, servesLocation } from "../lib/search";
 
-const filters = ["Tất cả", ...serviceCategories.map(category => category.name)];
+const ALL = "Tất cả";
+const filters = [ALL, ...serviceCategories.map(category => category.name as string)];
+const priceOptions = [
+  { id: "all", label: "Mọi mức giá" },
+  { id: "under-10", label: "Dưới 10 triệu", max: 10_000_000 },
+  { id: "10-30", label: "10–30 triệu", min: 10_000_000, max: 30_000_000 },
+  { id: "over-30", label: "Trên 30 triệu", min: 30_000_000 },
+] as const;
+
+type PriceId = typeof priceOptions[number]["id"];
 
 export default function VendorsPage() {
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("Tất cả");
+  const [filter, setFilter] = useState(ALL);
+  const [location, setLocation] = useState<string>(locationOptions[0]);
+  const [price, setPrice] = useState<PriceId>("all");
   const [profile, setProfile] = useState<DiscoveryProfile | null>(null);
   const [personalized, setPersonalized] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const requestedQuery = params.get("q") ?? "";
+    setQuery(params.get("q") ?? "");
     const requestedCategory = params.get("category") ?? "";
-    setQuery(requestedQuery);
     if (filters.includes(requestedCategory)) setFilter(requestedCategory);
     else if (requestedCategory === "Venue") setFilter("Địa điểm");
-    setPersonalized(params.get("recommended") === "1");
-    const saved = sessionStorage.getItem("the-two-discovery-profile");
-    if (saved) try { setProfile(JSON.parse(saved)); } catch { /* ignore invalid local profile */ }
+    const requestedLocation = params.get("location");
+    if (requestedLocation) setLocation(requestedLocation);
+    const requestedPrice = params.get("price");
+    if (priceOptions.some(option => option.id === requestedPrice)) setPrice(requestedPrice as PriceId);
+    const isPersonalized = params.get("recommended") === "1";
+    setPersonalized(isPersonalized);
+    const saved = loadDiscoveryProfile();
+    setProfile(saved);
+    if (isPersonalized && saved?.location && !requestedLocation) setLocation(saved.location);
+    setReady(true);
   }, []);
 
-  const recommended = useMemo(() => profile ? recommendedCategories(profile) : [], [profile]);
-  const results = useMemo(() => vendors.filter(vendor => {
-    const matchesFilter = filter === "Tất cả" || vendor.category === filter;
-    const matchesQuery = !query.trim() || `${vendor.name} ${vendor.category} ${vendor.location} ${vendor.description}`.toLowerCase().includes(query.toLowerCase());
-    return matchesFilter && matchesQuery;
-  }).sort((a, b) => {
-    if (!profile) return 0;
-    const score = (vendor: typeof a) => (recommended.includes(vendor.category) ? 2 : 0) + (profile.location && vendor.location.toLowerCase().includes(profile.location.toLowerCase()) ? 1 : 0);
-    return score(b) - score(a);
-  }), [filter, profile, query, recommended]);
-
-  function chooseCategory(category: string) {
-    setFilter(category);
+  // Keep every filter in the URL so results survive reloads and can be shared.
+  useEffect(() => {
+    if (!ready) return;
     const params = new URLSearchParams();
-    if (category !== "Tất cả") params.set("category", category);
-    if (query) params.set("q", query);
+    if (filter !== ALL) params.set("category", filter);
+    if (query.trim()) params.set("q", query.trim());
+    if (location !== locationOptions[0]) params.set("location", location);
+    if (price !== "all") params.set("price", price);
     if (personalized) params.set("recommended", "1");
     window.history.replaceState({}, "", `/vendors${params.size ? `?${params}` : ""}`);
+  }, [filter, query, location, price, personalized, ready]);
+
+  const recommended = useMemo(() => profile ? recommendedCategories(profile) : [], [profile]);
+  const priceRange = priceOptions.find(option => option.id === price)!;
+  const locationFilter = location === locationOptions[0] ? "" : location;
+
+  const results = useMemo(() => vendors.filter(vendor => {
+    if (filter !== ALL && vendor.category !== filter) return false;
+    if (!matchesQuery(vendor, query)) return false;
+    if (locationFilter && !servesLocation(vendor, locationFilter)) return false;
+    // Per-guest or per-item prices are not comparable with package totals.
+    if (price !== "all" && vendor.priceUnit) return false;
+    if ("min" in priceRange && (vendor.price == null || vendor.price < priceRange.min)) return false;
+    if ("max" in priceRange && (vendor.price == null || vendor.price >= priceRange.max)) return false;
+    return true;
+  }).sort((a, b) => {
+    if (!profile) return 0;
+    const score = (vendor: typeof a) => (recommended.includes(vendor.category) ? 2 : 0) + (profile.location && servesLocation(vendor, profile.location) ? 1 : 0);
+    return score(b) - score(a);
+  }), [filter, query, locationFilter, price, priceRange, profile, recommended]);
+
+  const hasExtraFilters = Boolean(query.trim() || locationFilter || price !== "all");
+  const localSupply = profile?.location ? vendors.filter(vendor => basedIn(vendor, profile.location)).length : null;
+
+  function resetFilters() {
+    setQuery("");
+    setLocation(locationOptions[0]);
+    setPrice("all");
+    setFilter(ALL);
   }
 
+  const emptyTitle = filter === ALL ? "Chưa có vendor khớp với bộ lọc" : `Chưa có vendor ${filter} khớp với bộ lọc`;
+
   return <PublicPage className="market-list-page">
-    <section className="subpage-hero blue"><div className="market-shell split-hero"><div><p className="eyebrow">VENDOR MARKETPLACE</p><h1>Tra cứu theo category,<br/><em>không lạc giữa quá nhiều lựa chọn.</em></h1><p>Chọn một nhóm dịch vụ, xem hồ sơ phù hợp rồi quay lại flow để tiếp tục category kế tiếp.</p></div><div className="flow-card"><b>FLOW TRA CỨU</b><ol><li>Chọn một category</li><li>Xem hồ sơ chi tiết</li><li>Gửi brief khi phù hợp</li><li>Quay lại category tiếp theo</li></ol></div></div></section>
+    <section className="subpage-hero blue"><div className="market-shell split-hero"><div><p className="eyebrow">VENDOR MARKETPLACE</p><h1>Tra cứu theo category,<br/><em>không lạc giữa quá nhiều lựa chọn.</em></h1><p>Chọn một nhóm dịch vụ, lọc theo khu vực và ngân sách, lưu vendor vào shortlist rồi so sánh trước khi gửi brief.</p></div><div className="flow-card"><b>FLOW TRA CỨU</b><ol><li>Chọn một category</li><li>Lưu vendor vào shortlist</li><li>So sánh & gửi brief</li><li>Quay lại category tiếp theo</li></ol></div></div></section>
     <section className="market-shell listing-section">
-      {personalized && profile && <div className="preference-bar"><div><p className="eyebrow">RECOMMENDATION ĐANG BẬT</p><h2>{profile.location || "Chưa chốt địa điểm"}{profile.date ? ` · ${profile.date}` : ""}</h2><p>Ưu tiên: {recommended.join(" → ")}</p></div><a href="/planning">Chỉnh preference →</a></div>}
+      {personalized && profile && <div className="preference-bar"><div><p className="eyebrow">ĐANG GỢI Ý THEO HỒ SƠ CỦA BẠN</p><h2>{profile.location || "Chưa chốt địa điểm"}{profile.date ? ` · ${formatWeddingMonth(profile.date)}` : ""}</h2><p>Thứ tự nên tra cứu: {recommended.join(" → ")}</p></div><a href="/planning">Chỉnh câu trả lời →</a></div>}
+      {personalized && profile?.location && localSupply === 0 && <div className="notice-bar" role="status"><b>Chưa có vendor đặt tại {profile.location}.</b> Kết quả dưới đây là vendor nhận làm toàn quốc. the two đang mở rộng khu vực này — bạn cũng có thể <a href="/inquiry">gửi brief để the two tìm giúp</a>.</div>}
 
-      {recommended.length > 0 && <div className="recommended-categories"><span>Flow gợi ý cho bạn</span>{recommended.map((name, index) => <button key={name} className={filter === name ? "active" : ""} onClick={() => chooseCategory(name)}><b>{String(index + 1).padStart(2, "0")}</b>{categoryMeta(name).icon} {name}</button>)}</div>}
+      {recommended.length > 0 && <div className="recommended-categories"><span>Flow gợi ý cho bạn</span>{recommended.map((name, index) => <button key={name} className={filter === name ? "active" : ""} onClick={() => setFilter(name)}><b>{String(index + 1).padStart(2, "0")}</b>{categoryMeta(name).icon} {name}</button>)}</div>}
 
-      <div className="listing-controls"><label><span>Tìm trong marketplace</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tên vendor, dịch vụ hoặc địa điểm"/></label><div>{filters.map(item => <button key={item} onClick={() => chooseCategory(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div></div>
-      <div className="listing-intro"><div><p className="eyebrow">{results.length} HỒ SƠ PHÙ HỢP</p><h2>{filter === "Tất cả" ? "Tất cả vendor đã xét duyệt" : filter}</h2></div><p>Inquiry không phải booking. Availability chỉ được xác nhận bởi vendor sau khi xem brief.</p></div>
-      <div className="market-vendor-grid detailed-grid">{results.map(vendor => <article className="market-vendor-card" key={vendor.slug}><a href={`/vendors/${vendor.slug}`} className={`market-vendor-image ${vendor.color}`}><span>✓ ĐÃ XÁC MINH</span><b>{vendor.name.slice(0, 1)}</b><div className="vendor-pattern"/></a><div className="market-vendor-body"><small>{vendor.category.toUpperCase()}</small><h3>{vendor.name}</h3><p>{vendor.description}</p><div className="vendor-meta"><span>⌖ {vendor.location}</span><em>{vendor.tag}</em></div><div className="vendor-card-bottom"><strong>{money(vendor.price)}</strong><a href={`/vendors/${vendor.slug}`}>Xem hồ sơ →</a></div></div></article>)}</div>
-      {!results.length && <div className="market-empty"><b>⌕</b><h3>Chưa có vendor phù hợp trong category này</h3><p>Thử category khác hoặc bỏ từ khóa tìm kiếm.</p><button onClick={() => { setQuery(""); chooseCategory("Tất cả"); }}>Xóa bộ lọc</button></div>}
+      <div className="listing-controls">
+        <label><span>Tìm trong marketplace</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Ví dụ: chụp ảnh hà nội, váy cưới, band"/></label>
+        <div role="group" aria-label="Lọc theo category">{filters.map(item => <button key={item} aria-pressed={filter === item} onClick={() => setFilter(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div>
+      </div>
+      <div className="listing-filters">
+        <label><span>Khu vực</span><select value={locationOptions.includes(location as typeof locationOptions[number]) ? location : "__custom"} onChange={event => setLocation(event.target.value)}>{locationOptions.map(option => <option key={option}>{option}</option>)}{!locationOptions.includes(location as typeof locationOptions[number]) && <option value="__custom">{location}</option>}</select></label>
+        <label><span>Giá khởi điểm</span><select value={price} onChange={event => setPrice(event.target.value as PriceId)}>{priceOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+        {hasExtraFilters && <button className="text-action" onClick={resetFilters}>Xóa bộ lọc</button>}
+      </div>
+      <div className="listing-intro"><div><p className="eyebrow">{results.length} HỒ SƠ PHÙ HỢP</p><h2>{filter === ALL ? "Tất cả vendor đã xét duyệt" : filter}</h2></div><p>Gửi brief miễn phí. Vendor xác nhận lịch trống và báo giá sau khi đọc brief.</p></div>
+      <div className="market-vendor-grid detailed-grid">{results.map(vendor => <VendorCard key={vendor.slug} vendor={vendor}/>)}</div>
+      {!results.length && <div className="market-empty"><b>⌕</b><h3>{emptyTitle}</h3><p>{query.trim() ? `Không tìm thấy “${query.trim()}”. ` : ""}Thử bỏ bớt bộ lọc, chọn category khác, hoặc gửi brief để the two tìm vendor giúp bạn.</p><div className="empty-actions"><button onClick={resetFilters}>Xóa bộ lọc</button><a href="/inquiry">Gửi brief cho the two →</a></div></div>}
     </section>
   </PublicPage>;
 }

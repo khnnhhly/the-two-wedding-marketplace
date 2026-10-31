@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { normalize } from "../lib/search";
 
 const quick = [
   { label: "Tìm đúng flow cho mình", href: "/planning" },
@@ -9,42 +10,54 @@ const quick = [
   { label: "Dành cho vendor", href: "/for-vendors" },
 ];
 
-function answerFor(text: string) {
-  const value = text.toLowerCase();
-  const category = value.includes("venue") || value.includes("địa điểm") ? "Địa điểm"
-    : value.includes("photo") || value.includes("ảnh") || value.includes("quay") ? "Photo & Film"
-    : value.includes("trang trí") || value.includes("decor") ? "Trang trí"
-    : value.includes("váy") || value.includes("trang phục") ? "Trang phục"
-    : value.includes("makeup") || value.includes("trang điểm") ? "Makeup"
-    : value.includes("thiệp") || value.includes("quà") ? "Thiệp & Quà"
-    : value.includes("band") || value.includes("nhạc") || value.includes("giải trí") ? "Giải trí"
-    : value.includes("planner") || value.includes("điều phối") ? "Wedding Planner" : null;
-  if (category) return { text: `Mình đã xác định category phù hợp là ${category}. Bạn có thể tra cứu thẳng và xem từng hồ sơ.`, href: `/vendors?category=${encodeURIComponent(category)}`, label: `Xem ${category}` };
-  if (value.includes("vendor") || value.includes("dịch vụ")) return { text: "Nếu chưa biết category nào cần trước, hãy trả lời bộ câu hỏi ngắn để nhận flow tra cứu phù hợp.", href: "/planning", label: "Tìm đúng flow" };
-  if (value.includes("template") || value.includes("checklist")) return { text: "Template có trang riêng và có thể thêm thẳng vào Wedding Workspace.", href: "/templates", label: "Xem template" };
-  if (value.includes("bán") || value.includes("gian hàng") || value.includes("đăng ký")) return { text: "Vendor có luồng onboarding riêng: tạo hồ sơ, gửi duyệt rồi quản lý inquiry trong Vendor Center.", href: "/vendor-onboarding", label: "Mở hồ sơ vendor" };
-  return { text: "Mình khuyên bắt đầu bằng 5 câu hỏi ngắn. the two sẽ khai thác insight rồi xếp thứ tự category cần tra cứu.", href: "/planning", label: "Bắt đầu discovery" };
+type Reply = { text: string; href: string; label: string };
+
+// Keyword routing on accent-free text, so "chup anh" and "chụp ảnh" behave the same.
+const categoryRules: [string[], string][] = [
+  [["venue", "dia diem", "nha hang", "san tiec"], "Địa điểm"],
+  [["photo", "chup", "nhiep anh", "anh cuoi", "quay phim", "film"], "Photo & Film"],
+  [["trang tri", "decor", "hoa cuoi", "hoa tuoi"], "Trang trí"],
+  [["vay", "trang phuc", "ao dai", "vest"], "Trang phục"],
+  [["makeup", "trang diem"], "Makeup"],
+  [["thiep", "qua cam on", "qua cuoi"], "Thiệp & Quà"],
+  [["band", "nhac", "giai tri", "mc", "dj"], "Giải trí"],
+  [["planner", "dieu phoi", "to chuc"], "Wedding Planner"],
+];
+
+function answerFor(input: string): Reply {
+  const value = normalize(input);
+  const has = (...terms: string[]) => terms.some(term => value.includes(term));
+  if (has("ngan sach", "chi phi", "bao nhieu tien", "budget", "chia tien", "phan bo")) return { text: "Budget Planner gợi ý cách phân bổ theo nhóm chi phí và tách rõ dự kiến với đã thanh toán. Nếu cần chuyên gia rà soát con số, hãy xem Planning clinic.", href: "/templates/budget-planner", label: "Mở Budget Planner" };
+  if (has("ban hang", "gian hang", "dang ky vendor", "mo shop", "tro thanh vendor")) return { text: "Vendor gửi hồ sơ không cần tài khoản; the two xét duyệt rồi liên hệ hoàn thiện listing.", href: "/vendor-apply", label: "Gửi hồ sơ vendor" };
+  if (has("phi", "gia goi", "cpc", "hoa hong", "commission")) return { text: "Bảng phí giải thích CPC, phí lead, hoa hồng booking và các gói subscription — kèm nguyên tắc không thu hai lần.", href: "/policies/fees", label: "Xem bảng phí" };
+  const category = categoryRules.find(([terms]) => has(...terms))?.[1];
+  if (category) return { text: `Category phù hợp là ${category}. Bạn có thể lọc thêm theo khu vực và mức giá, rồi lưu vendor vào shortlist để so sánh.`, href: `/vendors?category=${encodeURIComponent(category)}`, label: `Xem ${category}` };
+  if (has("template", "checklist", "timeline", "rundown")) return { text: "Template có trang giải thích riêng và có thể thêm thẳng vào Wedding Workspace.", href: "/templates", label: "Xem template" };
+  if (has("so sanh", "shortlist", "da luu")) return { text: "Shortlist so sánh giá, gói, khu vực và thông tin xác minh trên cùng một bảng.", href: "/shortlist", label: "Mở shortlist" };
+  return { text: "Mình chưa chắc bạn cần gì. Bộ 3 bước ngắn sẽ khai thác thông tin cưới rồi xếp thứ tự category nên tra cứu. Nếu muốn người thật hỗ trợ, hãy gửi brief.", href: "/planning", label: "Bắt đầu 3 bước" };
 }
 
 export function AiConcierge() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [reply, setReply] = useState<{ text: string; href: string; label: string } | null>(null);
+  const [thread, setThread] = useState<{ question: string; reply: Reply }[]>([]);
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!input.trim()) return;
-    setReply(answerFor(input));
+    setThread(current => [...current.slice(-3), { question: input.trim(), reply: answerFor(input) }]);
     setInput("");
   }
-  return <aside className={`ai-concierge${open ? " open" : ""}`} aria-label="the two AI guide">
+  return <aside className={`ai-concierge${open ? " open" : ""}`} aria-label="Trợ lý điều hướng the two">
     {open && <div className="ai-concierge-panel">
-      <header><span>✦</span><div><strong>the two AI guide</strong><small>Điều hướng & planning</small></div><button onClick={() => setOpen(false)} aria-label="Đóng AI guide">×</button></header>
-      <div className="ai-message"><b>Chào bạn, mình giúp gì được?</b><p>Nếu chưa biết bắt đầu từ đâu, mình sẽ đưa bạn qua bộ câu hỏi ngắn trước khi tra cứu.</p></div>
-      <div className="ai-quick">{quick.map(item => <a key={item.href} href={item.href}>{item.label}</a>)}</div>
-      {reply && <div className="ai-reply"><p>{reply.text}</p><a href={reply.href}>{reply.label} →</a></div>}
-      <form onSubmit={submit}><label htmlFor="ai-guide-input">Nhập câu hỏi</label><input id="ai-guide-input" value={input} onChange={event => setInput(event.target.value)} placeholder="Ví dụ: Mình muốn tìm photographer"/><button aria-label="Gửi">→</button></form>
-      <small>AI guide hỗ trợ định hướng; dữ liệu chỉ được lưu khi bạn xác nhận trong Workspace.</small>
+      <header><span>✦</span><div><strong>Trợ lý the two</strong><small>Điều hướng nhanh</small></div><button onClick={() => setOpen(false)} aria-label="Đóng trợ lý">×</button></header>
+      <div className="ai-thread" aria-live="polite">
+        <div className="ai-message"><b>Chào bạn, mình giúp gì được?</b><p>Hỏi về vendor, ngân sách, template hoặc mở gian hàng — mình sẽ đưa bạn tới đúng trang.</p></div>
+        {thread.length === 0 && <div className="ai-quick">{quick.map(item => <a key={item.href} href={item.href}>{item.label}</a>)}</div>}
+        {thread.map((item, index) => <div key={index}><p className="ai-question">{item.question}</p><div className="ai-reply"><p>{item.reply.text}</p><a href={item.reply.href}>{item.reply.label} →</a></div></div>)}
+      </div>
+      <form onSubmit={submit}><label htmlFor="ai-guide-input">Nhập câu hỏi</label><input id="ai-guide-input" value={input} onChange={event => setInput(event.target.value)} placeholder="Ví dụ: tìm chỗ chụp ảnh ở Hà Nội"/><button aria-label="Gửi">→</button></form>
+      <small>Trợ lý gợi ý điều hướng theo từ khóa, không thay thế tư vấn của planner.</small>
     </div>}
-    <button className="ai-concierge-trigger" onClick={() => setOpen(value => !value)} aria-expanded={open}><span>✦</span><b>{open ? "Đóng" : "Hỏi the two AI"}</b></button>
+    <button className="ai-concierge-trigger" onClick={() => setOpen(value => !value)} aria-expanded={open}><span>✦</span><b>{open ? "Đóng" : "Cần trợ giúp?"}</b></button>
   </aside>;
 }

@@ -6,8 +6,9 @@ test("builds the public wedding experience", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   assert.match(page, /Mọi thứ cho đám cưới/);
   assert.match(page, /the two/);
-  assert.match(page, /AI Wedding Planner/);
-  assert.match(page, /href="\/workspace"/);
+  assert.match(page, /PublicPage/);
+  assert.match(page, /vendors\.length/);
+  assert.doesNotMatch(page, /120\+|5 câu hỏi/);
   assert.doesNotMatch(page, /codex-preview/);
 });
 
@@ -72,11 +73,10 @@ test("core marketplace actions have dedicated routes instead of workspace fallba
   ]);
   assert.match(home, /href="\/vendors"/);
   assert.match(home, /href="\/templates"/);
-  assert.match(home, /href="\/for-vendors"/);
-  assert.match(home, /href="\/vendor-onboarding"/);
-  assert.match(vendorPage, /\/vendors\/\$\{vendor\.slug\}/);
+  assert.match(home, /href="\/vendor-apply"/);
+  assert.match(vendorPage, /VendorCard/);
   assert.match(templatePage, /\/templates\/\$\{item\.slug\}/);
-  assert.match(planningPage, /the-two-planning-draft/);
+  assert.match(planningPage, /saveDiscoveryProfile/);
   assert.match(onboardingPage, /register_vendor/);
 });
 
@@ -89,7 +89,8 @@ test("vendor center is ownership scoped and AI guide is available", async () => 
   assert.match(route, /WHERE owner_id=\?/);
   assert.match(route, /WHERE i\.vendor_id=\?/);
   assert.match(center, /Inquiry ≠ Booking/);
-  assert.match(guide, /the two AI guide/);
+  assert.match(guide, /Trợ lý the two/);
+  assert.match(guide, /normalize/);
 });
 
 test("vendor applications are stored, emailed, and exportable for Google Sheets", async () => {
@@ -117,11 +118,15 @@ test("couple discovery turns insight into a category-led lookup flow", async () 
     readFile(new URL("../app/vendors/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/data/discovery.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(planning, /the-two-discovery-profile/);
+  assert.match(discovery, /the-two-discovery-profile/);
   assert.match(planning, /Chọn tối đa 3/);
+  assert.match(planning, /validateProfile/);
+  assert.match(discovery, /dependencyOrder/);
   assert.match(planning, /recommendedCategories/);
   assert.match(vendors, /URLSearchParams/);
   assert.match(vendors, /params\.set\("recommended", "1"\)/);
+  assert.match(vendors, /params\.set\("q"/);
+  assert.match(vendors, /servesLocation/);
   assert.match(vendors, /Flow gợi ý cho bạn/);
   assert.match(discovery, /stageDefaults/);
   assert.match(discovery, /Ưu tiên tra cứu/);
@@ -138,4 +143,44 @@ test("marketplace categories have searchable vendor coverage and one font system
   for (const listing of ["lst_lotus", "lst_anmakeup", "lst_papier", "lst_band"]) assert.match(api, new RegExp(listing));
   assert.match(globals, /--font-ui/);
   assert.match(workspaceTheme, /font-family:var\(--font-ui\)!important/);
+});
+
+test("public flows complete on the marketplace domain without an account", async () => {
+  const [vercel, leads, go, inquiry, apply, search, chrome] = await Promise.all([
+    readFile(new URL("../vercel.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/public/leads/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/go/[slug]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/inquiry/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/vendor-apply/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/lib/search.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/MarketplaceChrome.tsx", import.meta.url), "utf8"),
+  ]);
+  const redirects = JSON.parse(vercel).redirects.map(rule => rule.source);
+  assert.ok(!redirects.includes("/api/:path*"), "public API routes must stay on Vercel");
+  assert.ok(redirects.includes("/api/platform"));
+  assert.match(leads, /consent !== true/);
+  assert.match(leads, /company_website/);
+  assert.match(go, /the_two_click_id/);
+  assert.match(go, /qualified: !bot && !repeat/);
+  assert.match(inquiry, /\/api\/public\/leads/);
+  assert.match(apply, /vendor_application/);
+  assert.match(search, /normalize\("NFD"\)/);
+  assert.match(chrome, /loginPath/);
+  assert.doesNotMatch(chrome, /<span>Instagram<\/span>/);
+});
+
+test("pages carry their own metadata and missing records return 404", async () => {
+  const [layout, vendorDetail, templateDetail, sitemap, robots] = await Promise.all([
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/vendors/[slug]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/templates/[slug]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/robots.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(layout, /template: "%s · the two"/);
+  assert.match(vendorDetail, /generateMetadata/);
+  assert.match(vendorDetail, /notFound\(\)/);
+  assert.match(templateDetail, /notFound\(\)/);
+  assert.match(sitemap, /vendors\.map/);
+  assert.match(robots, /sitemap\.xml/);
 });
